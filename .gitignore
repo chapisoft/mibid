@@ -1,0 +1,81 @@
+# ============================================================
+# MIBID - GIT IGNORE CONFIGURATION
+# Không gian Cộng tác Số Quản lý Gói thầu và Hồ sơ thầu XNK
+# ============================================================
+
+# 1. Hệ điều hành
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# 2. Môi trường phát triển & Trình soạn thảo
+.idea/
+*.iml
+*.ipr
+*.iws
+.vscode/
+*.swp
+*.swo
+*~
+.project
+.classpath
+.settings/
+
+# 3. Node.js & Next.js Frontend
+node_modules/
+**/node_modules/
+.next/
+**/.next/
+out/
+**/out/
+dist/
+**/dist/
+build/
+**/build/
+.turbo/
+**/.turbo/
+.npm/
+.yarn/
+*.tsbuildinfo
+**/*.tsbuildinfo
+.eslintcache
+
+# 4. Java & Spring Boot Backend
+target/
+**/target/
+*.class
+*.jar
+*.war
+*.ear
+.mvn/timing.properties
+.mvn/wrapper/maven-wrapper.jar
+
+# 5. Biến môi trường & Khóa bảo mật
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+*.pem
+*.key
+*.p12
+*.jks
+
+# 6. Nhật ký hệ thống & Tệp tạm thời
+*.log
+**/*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+scratch/
+**/scratch/
+tmp/
+temp/
+.gemini/
+.agents/scratch/
