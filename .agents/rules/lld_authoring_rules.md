@@ -9,6 +9,9 @@ Tài liệu này quy định hệ thống nguyên tắc, quy chuẩn cấu trúc
 * **Độ sâu kỹ thuật độc lập (Self-contained & Actionable):**
   * Tài liệu LLD phải có đủ độ sâu và chi tiết để kỹ sư phát triển (Developer) có thể triển khai mã nguồn ngay và kỹ sư kiểm thử (QA/QC) có thể viết kịch bản kiểm thử (Test Cases) mà không cần phải đọc thêm các tài liệu khác.
   * **Tuyệt đối không viết câu chữ thoái thác hoặc chung chung** như *"Xem thêm tài liệu BRD"*, *"Sẽ bổ sung sau"*, *"Cần xác nhận lại"*. Toàn bộ quy tắc, công thức tính toán và cấu trúc bảng phải được bóc tách chi tiết vào trong tài liệu.
+* **Nguyên tắc Zero-Hardcode & Zero-Default Data trong thiết kế:**
+  * Toàn bộ mã trạng thái, mã lỗi, phân loại, đơn vị tiền tệ, điều khoản thương mại trong thiết kế bắt buộc phải được đặc tả bằng bảng danh mục Enum cụ thể.
+  * Cấm đặc tả hoặc cho phép gán các giá trị mặc định giả lập khi khởi tạo hoặc trả về thông tin đối tượng (DTO/Response). Toàn bộ dữ liệu phải phản ánh đúng thực tế lưu trữ trong CSDL hoặc Request payload thực tế.
 * **Ngôn ngữ và định dạng chuẩn mực:**
   * Toàn bộ tài liệu sử dụng tiếng Việt kỹ thuật chuyên ngành, mạch lạc, chính xác.
   * Không chèn tiếng Anh đệm/dịch nghĩa song ngữ thừa thãi trong ngoặc đơn. Giữ lại tiếng Anh cho các định danh kỹ thuật quốc tế chuẩn (`RESTful API`, `Token JWT`, `Kafka Topic`, `SQL`, `Redis`, `JPA`, tên bảng, tên cột).

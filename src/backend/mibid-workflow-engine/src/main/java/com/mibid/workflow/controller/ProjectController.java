@@ -3,6 +3,7 @@ package com.mibid.workflow.controller;
 import com.mibid.core.context.TenantContextHolder;
 import com.mibid.core.dto.ResultResponse;
 import com.mibid.workflow.domain.Project;
+import com.mibid.workflow.service.WorkflowDefinitionService;
 import com.mibid.workflow.service.WorkflowService;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
@@ -58,10 +59,57 @@ public class ProjectController {
         return ResponseEntity.ok(ResultResponse.success(null));
     }
 
+    @PutMapping("/{id}/workflow/{workflowId}")
+    public ResponseEntity<ResultResponse<Project>> bindProjectWorkflow(
+            @PathVariable UUID id,
+            @PathVariable UUID workflowId) {
+        UUID tenantId = TenantContextHolder.getTenantId();
+        Project updated = workflowService.bindProjectWorkflow(id, workflowId, tenantId);
+        return ResponseEntity.ok(ResultResponse.success(updated));
+    }
+
+    @GetMapping("/{id}/workflow")
+    public ResponseEntity<ResultResponse<WorkflowDefinitionService.WorkflowDto>> getProjectWorkflow(
+            @PathVariable UUID id) {
+        return ResponseEntity.ok(ResultResponse.success(workflowService.getProjectWorkflow(id)));
+    }
+
     @GetMapping("/stage-requirements")
     public ResponseEntity<ResultResponse<List<WorkflowService.StageChecklistItemDto>>> getStageRequirements(
             @RequestParam(defaultValue = "STAGE_PREPARATION") String stage) {
         return ResponseEntity.ok(ResultResponse.success(workflowService.getStageRequirements(stage)));
+    }
+
+    @GetMapping("/{id}/stage-requirements")
+    public ResponseEntity<ResultResponse<List<WorkflowService.StageChecklistItemDto>>> getProjectStageRequirements(
+            @PathVariable UUID id,
+            @RequestParam(required = false, defaultValue = "ALL") String stage) {
+        return ResponseEntity.ok(ResultResponse.success(workflowService.getProjectStageRequirements(id, stage)));
+    }
+
+    @PostMapping("/{id}/stage-requirements")
+    public ResponseEntity<ResultResponse<WorkflowService.StageChecklistItemDto>> createStageRequirement(
+            @PathVariable UUID id,
+            @RequestBody WorkflowService.StageChecklistItemDto dto) {
+        UUID tenantId = TenantContextHolder.getTenantId();
+        return ResponseEntity.ok(ResultResponse.success(workflowService.createStageRequirement(id, dto, tenantId)));
+    }
+
+    @DeleteMapping("/stage-requirements/{itemId}")
+    public ResponseEntity<ResultResponse<Void>> deleteStageRequirement(@PathVariable UUID itemId) {
+        workflowService.deleteStageRequirement(itemId);
+        return ResponseEntity.ok(ResultResponse.success(null));
+    }
+
+    @PatchMapping("/{id}/checklist-status/{itemId}")
+    public ResponseEntity<ResultResponse<Boolean>> toggleChecklistItemStatus(
+            @PathVariable UUID id,
+            @PathVariable UUID itemId,
+            @RequestParam(defaultValue = "true") boolean isChecked) {
+        UUID tenantId = TenantContextHolder.getTenantId();
+        UUID userId = TenantContextHolder.getUserId();
+        boolean res = workflowService.toggleChecklistItemStatus(id, itemId, isChecked, tenantId, userId);
+        return ResponseEntity.ok(ResultResponse.success(res));
     }
 
     @PostMapping("/{id}/transition")

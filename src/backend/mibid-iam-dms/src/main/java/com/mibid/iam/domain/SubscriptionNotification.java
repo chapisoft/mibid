@@ -29,6 +29,9 @@ public class SubscriptionNotification {
     @Column(name = "tenant_id", length = 50, nullable = false)
     private String tenantId;
 
+    @Column(name = "tenant_code", length = 64)
+    private String tenantCode;
+
     @Column(name = "subscription_id", length = 50)
     private String subscriptionId;
 

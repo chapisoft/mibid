@@ -1,6 +1,7 @@
 package com.mibid.outbox.job;
 
 import com.mibid.outbox.domain.OutboxEvent;
+import com.mibid.core.domain.enums.OutboxEventStatus;
 import com.mibid.outbox.repository.OutboxEventRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -32,13 +33,13 @@ public class OutboxEventRelayJob {
         for (OutboxEvent event : pendingEvents) {
             try {
                 // Giả lập điều phối sự kiện sang Kafka Topic / Webhook đối tác
-                event.setStatus("PUBLISHED");
+                event.setStatus(OutboxEventStatus.PUBLISHED.name());
                 event.setProcessedAt(LocalDateTime.now());
             } catch (Exception ex) {
                 log.error("MIBID Outbox: Lỗi điều phối sự kiện ID {}: {}", event.getId(), ex.getMessage());
                 event.setRetryCount(event.getRetryCount() + 1);
                 if (event.getRetryCount() >= 5) {
-                    event.setStatus("DLQ");
+                    event.setStatus(OutboxEventStatus.DLQ.name());
                 }
             }
             outboxRepo.save(event);

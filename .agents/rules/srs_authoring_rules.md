@@ -10,6 +10,9 @@ Tài liệu này quy định hệ thống nguyên tắc, quy chuẩn cấu trúc
   * Toàn bộ tài liệu sử dụng tiếng Việt chuyên ngành, mạch lạc, chính xác và tường minh.
   * **Tuyệt đối không chèn tiếng Anh đệm hoặc dịch nghĩa song ngữ kèm theo không cần thiết** (không viết dạng mở ngoặc giải nghĩa như: *Lưu nháp (Draft)*, *Phê duyệt (Approve)*, *Từ chối (Reject)*, *Xóa (Delete)*, *Màn hình (Screen)*, *Người dùng (User)*).
   * **Bảo lưu tuyệt đối các thuật ngữ chuyên ngành chuẩn quốc tế khó thay thế** mà việc dịch sang tiếng Việt làm sai lệch ngữ nghĩa (ví dụ: `Engine` không dịch là "Động cơ", `FIFO`, `BOM`, `OEE`, `SPC`, `LOTO`, `WASM`, `PWA`, `SaaS`, `Buffer`, `Pipeline`, `Token`, `Payload`, `Webhook`, `Schema`, `Driver`, `Cluster`, `Vector Clocks`, `Exponential Backoff`, `RESTful API`, `Token AES-256`, `JSON`, `SQL`, `Redis`, `status = APPROVED`, `martyrs.identity_code`).
+* **Nguyên tắc Zero-Hardcode & Zero-Default Data trong đặc tả yêu cầu:**
+  * Toàn bộ giá trị thuộc tính danh mục (trạng thái, phân loại, loại tiền tệ, điều khoản thương mại) bắt buộc phải được định nghĩa bằng danh mục mã Enum cụ thể.
+  * Trong bảng mô tả thành phần giao diện và kịch bản luồng nghiệp vụ: Tuyệt đối không quy định tự ý điền sẵn các giá trị mặc định giả lập khi khởi tạo hoặc nạp form/DTO. Mọi dữ liệu phải bắt đầu từ trạng thái rỗng hoặc nạp chính xác từ CSDL.
 * **Trình bày kỹ thuật trang nhã:**
   * Tuyệt đối không chèn biểu tượng (icon / emoji) vào các tiêu đề đề mục, đầu dòng hay bảng biểu.
   * Sử dụng ký tự Unicode thuần túy (`→`, `×`, `≤`, `≥`, `•`) thay cho công thức LaTeX toán học chứa dấu `$`.

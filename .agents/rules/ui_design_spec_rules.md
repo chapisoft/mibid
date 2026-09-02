@@ -28,7 +28,10 @@ Tài liệu này quy định hệ thống nguyên tắc, quy chuẩn cấu trúc
        3. `zh.json` (Tiếng Trung giản thể — 中文)
        4. `ja.json` (Tiếng Nhật — 日本語)
        5. `ko.json` (Tiếng Hàn — 한국어)
-     * **Nguyên tắc Zero-Hardcode Text:** 100% các chuỗi văn bản (tiêu đề, nhãn trường, placeholder, tiêu đề cột bảng DataTable, thông báo lỗi validation, popup xác nhận, toast thông báo) phải được gọi qua hàm `t('key')`. Tuyệt đối không hardcode chuỗi ký tự thô trong mã nguồn component.
+     * **Nguyên tắc Zero-Hardcode & Zero-Default Data:**
+       - 100% các chuỗi văn bản (tiêu đề, nhãn trường, placeholder, tiêu đề cột bảng DataTable, thông báo lỗi validation, popup xác nhận, toast thông báo) phải được gọi qua hàm `t('key')`. Tuyệt đối không hardcode chuỗi ký tự thô trong mã nguồn component.
+       - Toàn bộ trạng thái, vai trò, đơn vị tiền tệ, mã lỗi phải sử dụng Enums đã khai báo tập trung.
+       - **Không điền sẵn giá trị mặc định giả lập:** State khởi tạo của form nhập liệu, giá trị input, bảng danh sách phải để rỗng hoặc nạp 100% từ API. Cấm tự ý điền sẵn các số liệu/chuỗi giả lập vào form.
    * **Phía Backend (BE):**
      * Mặc định tích hợp bộ giải quyết ngôn ngữ tự động (`LocaleResolver` / `Accept-HeaderLocaleResolver`) bắt tiêu đề `Accept-Language` từ HTTP Request.
      * Cấu hình `ResourceBundleMessageSource` với 5 tệp thông điệp bản địa hóa chuẩn:

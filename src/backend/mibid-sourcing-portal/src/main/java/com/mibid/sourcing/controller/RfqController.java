@@ -4,6 +4,9 @@ import com.mibid.core.context.TenantContextHolder;
 import com.mibid.core.dto.ResultResponse;
 import com.mibid.sourcing.domain.Rfq;
 import com.mibid.sourcing.service.RfqService;
+import com.mibid.sourcing.dto.CreateRfqInvitationRequest;
+import com.mibid.sourcing.dto.RfqInvitationDto;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -38,6 +41,14 @@ public class RfqController {
         UUID tenantId = TenantContextHolder.getTenantId();
         Rfq created = rfqService.createRfq(rfq, tenantId);
         return ResponseEntity.ok(ResultResponse.success(created));
+    }
+
+    @PostMapping("/invite")
+    public ResponseEntity<ResultResponse<RfqInvitationDto>> inviteVendor(
+            @Valid @RequestBody CreateRfqInvitationRequest req) {
+        UUID tenantId = TenantContextHolder.getTenantId();
+        RfqInvitationDto invitation = rfqService.createRfqWithVendorInvitation(req, tenantId);
+        return ResponseEntity.ok(ResultResponse.success(invitation));
     }
 
     @PutMapping("/{id}")

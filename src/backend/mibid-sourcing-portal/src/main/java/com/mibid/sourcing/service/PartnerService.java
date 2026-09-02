@@ -1,5 +1,8 @@
 package com.mibid.sourcing.service;
 
+import com.mibid.core.domain.enums.OnboardingStatus;
+import com.mibid.core.domain.enums.PartnerStatus;
+import com.mibid.core.domain.enums.TicketStatus;
 import com.mibid.core.exception.AppException;
 import com.mibid.core.exception.ErrorCode;
 import com.mibid.sourcing.domain.PartnerOnboardingRequest;
@@ -13,8 +16,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.math.BigDecimal;
-import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 
@@ -35,24 +36,20 @@ public class PartnerService {
     @Transactional(readOnly = true)
     public SupplierPartner getPartnerById(UUID id, UUID tenantId) {
         return partnerRepository.findByIdAndTenantIdAndIsDeletedFalse(id, tenantId)
-                .orElseThrow(() -> new AppException(ErrorCode.RESOURCE_NOT_FOUND, "Không tìm thấy đối tác: " + id));
+                .orElseThrow(() -> new AppException(ErrorCode.RESOURCE_NOT_FOUND, "error.partner.notFound"));
     }
 
     @Transactional
     public SupplierPartner createPartner(SupplierPartner partner, UUID tenantId) {
-        if (tenantId != null) {
-            partner.setTenantId(tenantId);
-        } else {
-            partner.setTenantId(UUID.fromString("11111111-1111-1111-1111-111111111111"));
+        if (tenantId == null) {
+            throw new AppException(ErrorCode.UNAUTHORIZED, "error.partner.tenantIdRequired");
         }
+        partner.setTenantId(tenantId);
         if (partner.getCode() == null || partner.getCode().isBlank()) {
             partner.setCode("PART-" + (int)(1000 + Math.random() * 9000));
         }
         if (partner.getStatus() == null || partner.getStatus().isBlank()) {
-            partner.setStatus("ACTIVE");
-        }
-        if (partner.getRating() == null) {
-            partner.setRating(BigDecimal.valueOf(5.0));
+            partner.setStatus(PartnerStatus.ACTIVE.name());
         }
         if (partner.getTotalQuotesSubmitted() == null) {
             partner.setTotalQuotesSubmitted(0);
@@ -60,13 +57,12 @@ public class PartnerService {
         if (partner.getTotalWonBids() == null) {
             partner.setTotalWonBids(0);
         }
-        if (partner.getIsoCertified() == null) {
-            partner.setIsoCertified(true);
-        }
+        // rating và isoCertified để null, vendor tự cập nhật sau khi có dữ liệu thực tế
         return partnerRepository.save(partner);
     }
 
     @Transactional
+    @SuppressWarnings("null")
     public SupplierPartner updatePartner(UUID id, SupplierPartner updates, UUID tenantId) {
         SupplierPartner existing = getPartnerById(id, tenantId);
         if (updates.getName() != null) existing.setName(updates.getName());
@@ -94,13 +90,14 @@ public class PartnerService {
     }
 
     @Transactional
+    @SuppressWarnings("null")
     public void approveOnboarding(UUID id, UUID tenantId) {
         PartnerOnboardingRequest req = onboardingRepository.findByIdAndTenantIdAndIsDeletedFalse(id, tenantId)
-                .orElseThrow(() -> new AppException(ErrorCode.RESOURCE_NOT_FOUND, "Không tìm thấy hồ sơ đăng ký: " + id));
-        req.setStatus("APPROVED");
+                .orElseThrow(() -> new AppException(ErrorCode.RESOURCE_NOT_FOUND, "error.partner.onboardingNotFound"));
+        req.setStatus(OnboardingStatus.APPROVED.name());
         onboardingRepository.save(req);
 
-        // Tạo SupplierPartner mới
+        // Tạo SupplierPartner mới từ dữ liệu hồ sơ đăng ký thực tế
         SupplierPartner newPartner = SupplierPartner.builder()
                 .tenantId(req.getTenantId())
                 .code("PART-" + (int)(1000 + Math.random() * 9000))
@@ -111,11 +108,10 @@ public class PartnerService {
                 .contactPerson(req.getContactPerson())
                 .email(req.getEmail())
                 .phone(req.getPhone())
-                .status("ACTIVE")
-                .rating(BigDecimal.valueOf(5.0))
+                .status(PartnerStatus.ACTIVE.name())
                 .totalQuotesSubmitted(0)
                 .totalWonBids(0)
-                .isoCertified(true)
+                // rating và isoCertified để null, cập nhật sau khi có dữ liệu đánh giá thực tế
                 .build();
         partnerRepository.save(newPartner);
     }
@@ -123,8 +119,8 @@ public class PartnerService {
     @Transactional
     public void rejectOnboarding(UUID id, UUID tenantId) {
         PartnerOnboardingRequest req = onboardingRepository.findByIdAndTenantIdAndIsDeletedFalse(id, tenantId)
-                .orElseThrow(() -> new AppException(ErrorCode.RESOURCE_NOT_FOUND, "Không tìm thấy hồ sơ đăng ký: " + id));
-        req.setStatus("REJECTED");
+                .orElseThrow(() -> new AppException(ErrorCode.RESOURCE_NOT_FOUND, "error.partner.onboardingNotFound"));
+        req.setStatus(OnboardingStatus.REJECTED.name());
         onboardingRepository.save(req);
     }
 
@@ -136,21 +132,21 @@ public class PartnerService {
     @Transactional
     public void resolveTicket(UUID id, UUID tenantId) {
         PartnerSupportTicket ticket = ticketRepository.findByIdAndTenantIdAndIsDeletedFalse(id, tenantId)
-                .orElseThrow(() -> new AppException(ErrorCode.RESOURCE_NOT_FOUND, "Không tìm thấy ticket hỗ trợ: " + id));
-        ticket.setStatus("RESOLVED");
+                .orElseThrow(() -> new AppException(ErrorCode.RESOURCE_NOT_FOUND, "error.partner.ticketNotFound"));
+        ticket.setStatus(TicketStatus.RESOLVED.name());
         ticketRepository.save(ticket);
     }
 
     @Transactional
     public boolean resendMagicLink(UUID ticketId, UUID tenantId) {
         PartnerSupportTicket ticket = ticketRepository.findByIdAndTenantIdAndIsDeletedFalse(ticketId, tenantId)
-                .orElseThrow(() -> new AppException(ErrorCode.RESOURCE_NOT_FOUND, "Không tìm thấy ticket hỗ trợ: " + ticketId));
-        // Sinh mã PIN mới 6 số ngẫu nhiên
+                .orElseThrow(() -> new AppException(ErrorCode.RESOURCE_NOT_FOUND, "error.partner.ticketNotFound"));
+        // Sinh mã PIN mới 6 số ngỪu nhiên
         String newPin = String.valueOf((int)(100000 + Math.random() * 900000));
         ticket.setCurrentPin(newPin);
-        ticket.setStatus("RESOLVED");
+        ticket.setStatus(TicketStatus.RESOLVED.name());
         ticketRepository.save(ticket);
-        log.info("Đã tái phát hành Magic Link và PIN {} cho đối tác {}", newPin, ticket.getPartnerEmail());
+        log.info("Reissued magic link for partner support ticket ID: {}, email: {}", ticket.getId(), ticket.getPartnerEmail());
         return true;
     }
 }

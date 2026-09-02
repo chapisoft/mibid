@@ -50,6 +50,13 @@ public class TaskController {
         return ResponseEntity.ok(ResultResponse.success(updated));
     }
 
+    @PostMapping("/{id}/complete")
+    public ResponseEntity<ResultResponse<Task>> completeTask(@PathVariable UUID id) {
+        UUID tenantId = TenantContextHolder.getTenantId();
+        Task completed = taskService.completeTaskWithGate(id, tenantId);
+        return ResponseEntity.ok(ResultResponse.success(completed));
+    }
+
     @DeleteMapping("/{id}")
     public ResponseEntity<ResultResponse<Void>> deleteTask(@PathVariable UUID id) {
         UUID tenantId = TenantContextHolder.getTenantId();

@@ -107,6 +107,7 @@ public class IntegrationController {
     }
 
     @DeleteMapping("/dlq/{id}")
+    @SuppressWarnings("null")
     public ResponseEntity<ResultResponse<Void>> discardDlq(@PathVariable String id) {
         try {
             outboxRepo.deleteById(UUID.fromString(id));

@@ -1,6 +1,8 @@
 package com.mibid.iam.service;
 
 import com.mibid.iam.domain.AppMenu;
+import com.mibid.core.exception.AppException;
+import com.mibid.core.exception.ErrorCode;
 import com.mibid.iam.domain.TenantMenuPermission;
 import com.mibid.iam.repository.AppMenuRepository;
 import com.mibid.iam.repository.TenantMenuPermissionRepository;
@@ -68,7 +70,7 @@ public class MenuManagementService {
         List<AppMenu> allMenus = menuRepository.findByIsActiveTrueOrderBySortOrderAscCreatedAtAsc();
         Map<String, List<AppMenu>> childrenMap = allMenus.stream()
                 .filter(m -> m.getParentId() != null)
-                .collect(Collectors.groupingBy(AppMenu::getParentId));
+                .collect(Collectors.groupingBy(m -> m.getParentId()));
 
         return allMenus.stream()
                 .filter(m -> m.getParentId() == null)
@@ -108,14 +110,14 @@ public class MenuManagementService {
         List<AppMenu> allMenus = menuRepository.findByIsActiveTrueOrderBySortOrderAscCreatedAtAsc();
         List<TenantMenuPermission> permissions = tenantMenuPermissionRepository.findByTenantId(tenantId);
         Map<String, TenantMenuPermission> permMap = permissions.stream()
-                .collect(Collectors.toMap(TenantMenuPermission::getMenuId, p -> p, (p1, p2) -> p1));
+                .collect(Collectors.toMap(p -> p.getMenuId(), p -> p, (p1, p2) -> p1));
 
         return allMenus.stream()
                 .map(m -> {
                     TenantMenuPermission p = permMap.get(m.getId());
                     boolean isEnabled = p == null || Boolean.TRUE.equals(p.getIsEnabled());
                     return TenantMenuPermissionDto.builder()
-                            .id(p != null ? p.getId() : "TMP-" + tenantId + "-" + m.getId())
+                            .id(p != null ? p.getId() : null)
                             .tenantId(tenantId)
                             .menuId(m.getId())
                             .menuCode(m.getCode())
@@ -162,7 +164,7 @@ public class MenuManagementService {
     @Transactional
     public AppMenu updateMenu(String menuId, AppMenu updateRequest) {
         AppMenu menu = menuRepository.findById(menuId)
-                .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy Menu ID: " + menuId));
+                .orElseThrow(() -> new AppException(ErrorCode.RESOURCE_NOT_FOUND, "error.menu.notFound"));
 
         menu.setTitle(updateRequest.getTitle());
         menu.setPath(updateRequest.getPath());
@@ -179,9 +181,9 @@ public class MenuManagementService {
     @Transactional
     public void deleteMenu(String menuId) {
         AppMenu menu = menuRepository.findById(menuId)
-                .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy Menu ID: " + menuId));
+                .orElseThrow(() -> new AppException(ErrorCode.RESOURCE_NOT_FOUND, "error.menu.notFound"));
         if (Boolean.TRUE.equals(menu.getIsSystem())) {
-            throw new IllegalStateException("Không thể xóa Menu hệ thống mặc định");
+            throw new AppException(ErrorCode.BAD_REQUEST, "error.menu.cannotDeleteSystemMenu");
         }
         menuRepository.deleteById(menuId);
     }

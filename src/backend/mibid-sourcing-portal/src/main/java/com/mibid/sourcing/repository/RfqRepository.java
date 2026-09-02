@@ -16,12 +16,15 @@ public interface RfqRepository extends JpaRepository<Rfq, UUID> {
     @Query("SELECT r FROM Rfq r WHERE r.isDeleted = false AND (:tenantId IS NULL OR r.tenantId = :tenantId)")
     List<Rfq> findByTenantIdAndIsDeletedFalse(@Param("tenantId") UUID tenantId);
 
-    @Query("SELECT r FROM Rfq r WHERE r.isDeleted = false AND (:tenantId IS NULL OR r.tenantId = :tenantId) AND (r.projectId = :projectId OR r.code = :projectId)")
-    List<Rfq> findByTenantIdAndProjectIdAndIsDeletedFalse(@Param("tenantId") UUID tenantId, @Param("projectId") String projectId);
+    @Query("SELECT r FROM Rfq r WHERE r.isDeleted = false AND (:tenantId IS NULL OR r.tenantId = :tenantId) AND (r.projectId = :projectId)")
+    List<Rfq> findByTenantIdAndProjectIdAndIsDeletedFalse(@Param("tenantId") UUID tenantId, @Param("projectId") UUID projectId);
 
     @Query("SELECT r FROM Rfq r WHERE r.id = :id AND r.isDeleted = false AND (:tenantId IS NULL OR r.tenantId = :tenantId)")
     Optional<Rfq> findByIdAndTenantIdAndIsDeletedFalse(@Param("id") UUID id, @Param("tenantId") UUID tenantId);
 
     @Query("SELECT r FROM Rfq r WHERE r.code = :code AND r.isDeleted = false AND (:tenantId IS NULL OR r.tenantId = :tenantId)")
     Optional<Rfq> findByCodeAndTenantIdAndIsDeletedFalse(@Param("code") String code, @Param("tenantId") UUID tenantId);
+
+    @Query("SELECT COUNT(r) > 0 FROM Rfq r WHERE r.isDeleted = false AND (:tenantId IS NULL OR r.tenantId = :tenantId) AND r.projectId = :projectId AND LOWER(r.supplierEmail) = LOWER(:email)")
+    boolean existsByProjectIdAndSupplierEmail(@Param("tenantId") UUID tenantId, @Param("projectId") UUID projectId, @Param("email") String email);
 }

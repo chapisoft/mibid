@@ -18,7 +18,7 @@ import java.util.zip.ZipOutputStream;
 public class TenderAssemblyService {
 
     public byte[] assembleTenderPackageZip(UUID projectId, Map<String, byte[]> documentFiles) throws IOException {
-        log.info("Bắt đầu đóng gói hồ sơ dự thầu ZIP cho Dự án {}", projectId);
+        log.info("Starting assembly of tender ZIP dossier for project ID: {}", projectId);
         try (ByteArrayOutputStream baos = new ByteArrayOutputStream();
              ZipOutputStream zos = new ZipOutputStream(baos)) {
 
@@ -30,7 +30,7 @@ public class TenderAssemblyService {
             }
 
             zos.finish();
-            log.info("Hoàn tất đóng gói hồ sơ thầu ZIP (Tổng số tệp: {})", documentFiles.size());
+            log.info("Completed assembly of tender ZIP dossier (Total files: {})", documentFiles.size());
             return baos.toByteArray();
         }
     }

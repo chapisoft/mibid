@@ -4,15 +4,24 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
+@Slf4j
 @Service
+@RequiredArgsConstructor
 public class AnalyticsService {
+
+    private final JdbcTemplate jdbcTemplate;
 
     @Data
     @Builder
@@ -126,151 +135,417 @@ public class AnalyticsService {
         private Double clarificationRatePercent;
     }
 
+    @Transactional(readOnly = true)
     public BiGoalTargetDto getGoalTargets(UUID tenantId) {
+        // 1. Tính doanh thu thực tế từ các gói thầu thắng và tỷ lệ thắng từ bảng projects
+        final String projectSql = """
+                SELECT 
+                    COALESCE(SUM(CASE WHEN status = 'WON' THEN estimated_budget ELSE 0 END), 0) AS revenue_won,
+                    COUNT(*) AS total_projects,
+                    COUNT(CASE WHEN status = 'WON' THEN 1 END) AS won_projects
+                FROM projects 
+                WHERE (?::uuid IS NULL OR tenant_id = ?::uuid)
+                  AND is_deleted = false
+                """;
+
+        BigDecimal revenueActual = BigDecimal.ZERO;
+        double winRateActual = 0.0;
+
+        try {
+            var row = jdbcTemplate.queryForMap(
+                    java.util.Objects.requireNonNull(projectSql),
+                    tenantId,
+                    tenantId
+            );
+            Number rev = (Number) row.get("revenue_won");
+            Number total = (Number) row.get("total_projects");
+            Number won = (Number) row.get("won_projects");
+
+            if (rev != null) {
+                revenueActual = new BigDecimal(rev.toString());
+            }
+            long totalCount = total != null ? total.longValue() : 0;
+            long wonCount = won != null ? won.longValue() : 0;
+            if (totalCount > 0) {
+                winRateActual = Math.round((wonCount * 100.0 / totalCount) * 10.0) / 10.0;
+            }
+        } catch (Exception e) {
+            log.warn("Could not query project goal metrics from DB: {}", e.getMessage());
+        }
+
+        // 2. Tính tiết kiệm mua sắm thực tế từ bảng rfqs
+        final String rfqSql = """
+                SELECT 
+                    COALESCE(SUM(CASE WHEN budget_amount > total_quote_amount AND total_quote_amount > 0 
+                                      THEN (budget_amount - total_quote_amount) ELSE 0 END), 0) AS savings
+                FROM rfqs
+                WHERE (?::uuid IS NULL OR tenant_id = ?::uuid)
+                  AND is_deleted = false
+                """;
+
+        BigDecimal savingsActual = BigDecimal.ZERO;
+        try {
+            var row = jdbcTemplate.queryForMap(
+                    java.util.Objects.requireNonNull(rfqSql),
+                    tenantId,
+                    tenantId
+            );
+            Number sav = (Number) row.get("savings");
+            if (sav != null) {
+                savingsActual = new BigDecimal(sav.toString());
+            }
+        } catch (Exception e) {
+            log.warn("Could not query rfq savings metrics from DB: {}", e.getMessage());
+        }
+
+        // 3. Đọc chỉ tiêu kế hoạch (Target) từ bảng cấu hình system_config
+        BigDecimal revenueTarget = getConfigDecimal("analytics.target.bidding_revenue", BigDecimal.ZERO);
+        Double winRateTarget = getConfigDouble("analytics.target.win_rate", 0.0);
+        BigDecimal savingsTarget = getConfigDecimal("analytics.target.sourcing_savings", BigDecimal.ZERO);
+        Integer cycleTarget = getConfigInt("analytics.target.cycle_days", 0);
+
+        Double revenueProgress = revenueTarget.compareTo(BigDecimal.ZERO) > 0
+                ? Math.round(revenueActual.multiply(BigDecimal.valueOf(100)).divide(revenueTarget, 1, RoundingMode.HALF_UP).doubleValue() * 10.0) / 10.0
+                : 0.0;
+
+        Double savingsProgress = savingsTarget.compareTo(BigDecimal.ZERO) > 0
+                ? Math.round(savingsActual.multiply(BigDecimal.valueOf(100)).divide(savingsTarget, 1, RoundingMode.HALF_UP).doubleValue() * 10.0) / 10.0
+                : 0.0;
+
         return BiGoalTargetDto.builder()
-                .biddingRevenueTargetVnd(new BigDecimal("200000000000"))
-                .biddingRevenueActualVnd(new BigDecimal("186000000000"))
-                .biddingRevenueProgressPercent(93.0)
-                .winRateTarget(75.0)
-                .winRateActual(78.5)
-                .winRateDiffPercent(3.5)
-                .sourcingSavingsTargetVnd(new BigDecimal("15000000000"))
-                .sourcingSavingsActualVnd(new BigDecimal("14800000000"))
-                .sourcingSavingsProgressPercent(98.6)
-                .tenderCycleTargetDays(30)
-                .tenderCycleActualDays(28)
+                .biddingRevenueTargetVnd(revenueTarget)
+                .biddingRevenueActualVnd(revenueActual)
+                .biddingRevenueProgressPercent(revenueProgress)
+                .winRateTarget(winRateTarget)
+                .winRateActual(winRateActual)
+                .winRateDiffPercent(Math.round((winRateActual - winRateTarget) * 10.0) / 10.0)
+                .sourcingSavingsTargetVnd(savingsTarget)
+                .sourcingSavingsActualVnd(savingsActual)
+                .sourcingSavingsProgressPercent(savingsProgress)
+                .tenderCycleTargetDays(cycleTarget)
+                .tenderCycleActualDays(0)
                 .build();
     }
 
+    @Transactional(readOnly = true)
     public List<QuarterlyWinTrendDto> getQuarterlyTrends(UUID tenantId) {
+        String sql = """
+                SELECT 
+                    to_char(created_at, 'YYYY-"Q"Q') AS quarter_code,
+                    COUNT(*) AS submitted_count,
+                    COUNT(CASE WHEN status = 'WON' THEN 1 END) AS won_count,
+                    COALESCE(SUM(CASE WHEN status = 'WON' THEN estimated_budget ELSE 0 END), 0) AS revenue_won
+                FROM projects
+                WHERE (? IS NULL OR tenant_id = ?)
+                  AND is_deleted = false
+                GROUP BY quarter_code
+                ORDER BY quarter_code DESC
+                LIMIT 8
+                """;
+
         List<QuarterlyWinTrendDto> list = new ArrayList<>();
-        list.add(new QuarterlyWinTrendDto("Q3/2025", 12, 9, 75.0, new BigDecimal("32000000000")));
-        list.add(new QuarterlyWinTrendDto("Q4/2025", 16, 12, 75.0, new BigDecimal("48000000000")));
-        list.add(new QuarterlyWinTrendDto("Q1/2026", 14, 11, 78.6, new BigDecimal("45000000000")));
-        list.add(new QuarterlyWinTrendDto("Q2/2026", 18, 14, 77.8, new BigDecimal("61000000000")));
-        list.add(new QuarterlyWinTrendDto("Q3/2026 (YTD)", 10, 8, 80.0, new BigDecimal("38000000000")));
+        try {
+            jdbcTemplate.query(sql, ps -> {
+                ps.setObject(1, tenantId);
+                ps.setObject(2, tenantId);
+            }, rs -> {
+                String q = rs.getString("quarter_code");
+                int submitted = rs.getInt("submitted_count");
+                int won = rs.getInt("won_count");
+                double winRate = submitted > 0 ? Math.round((won * 100.0 / submitted) * 10.0) / 10.0 : 0.0;
+                BigDecimal rev = rs.getBigDecimal("revenue_won");
+
+                list.add(new QuarterlyWinTrendDto(q, submitted, won, winRate, rev));
+            });
+        } catch (Exception e) {
+            log.warn("Error fetching quarterly trends: {}", e.getMessage());
+        }
         return list;
     }
 
+    @Transactional(readOnly = true)
     public List<IndustrySectorShareDto> getSectorShares(UUID tenantId) {
+        String sql = """
+                SELECT 
+                    COALESCE(industry_sector, 'OTHER') AS sector_code,
+                    COUNT(*) AS project_count,
+                    COALESCE(SUM(estimated_budget), 0) AS total_val
+                FROM projects
+                WHERE (? IS NULL OR tenant_id = ?)
+                  AND is_deleted = false
+                GROUP BY industry_sector
+                ORDER BY total_val DESC
+                """;
+
         List<IndustrySectorShareDto> list = new ArrayList<>();
-        list.add(new IndustrySectorShareDto("ENERGY_POWER", "Năng Lượng & Điện Lực (EVN)", 6, new BigDecimal("86000000000"), 46.2, "#3b82f6"));
-        list.add(new IndustrySectorShareDto("OIL_GAS", "Dầu Khí & Hóa Chất (PVN)", 3, new BigDecimal("42000000000"), 22.6, "#8b5cf6"));
-        list.add(new IndustrySectorShareDto("TELECOM_DC", "Viễn Thông & Trung Tâm Dữ Liệu", 3, new BigDecimal("38000000000"), 20.4, "#06b6d4"));
-        list.add(new IndustrySectorShareDto("INDUSTRY_WATER", "Công Nghiệp & Xử Lý Nước", 2, new BigDecimal("20000000000"), 10.8, "#10b981"));
+        try {
+            BigDecimal grandTotal = BigDecimal.ZERO;
+            List<IndustrySectorShareDto> rawList = new ArrayList<>();
+
+            List<java.util.Map<String, Object>> rows = jdbcTemplate.queryForList(sql, tenantId, tenantId);
+            for (var row : rows) {
+                String sector = (String) row.get("sector_code");
+                int cnt = ((Number) row.get("project_count")).intValue();
+                BigDecimal val = new BigDecimal(row.get("total_val").toString());
+                grandTotal = grandTotal.add(val);
+
+                rawList.add(IndustrySectorShareDto.builder()
+                        .sectorCode(sector)
+                        .sectorName(sector)
+                        .count(cnt)
+                        .totalValueVnd(val)
+                        .colorHex("#3b82f6")
+                        .build());
+            }
+
+            for (var item : rawList) {
+                double pct = grandTotal.compareTo(BigDecimal.ZERO) > 0
+                        ? item.getTotalValueVnd().multiply(BigDecimal.valueOf(100)).divide(grandTotal, 1, RoundingMode.HALF_UP).doubleValue()
+                        : 0.0;
+                item.setPercentage(pct);
+                list.add(item);
+            }
+        } catch (Exception e) {
+            log.warn("Error fetching sector shares: {}", e.getMessage());
+        }
         return list;
     }
 
+    @Transactional(readOnly = true)
     public List<ItemizedTenderPerformanceDto> getItemizedTenders(UUID tenantId, String tenderType, String sector, String quarter) {
+        StringBuilder sql = new StringBuilder("""
+                SELECT 
+                    id,
+                    code,
+                    name,
+                    tender_type,
+                    industry_sector,
+                    investor_name,
+                    status,
+                    estimated_budget,
+                    to_char(created_at, 'YYYY-"Q"Q') AS completion_quarter
+                FROM projects
+                WHERE (? IS NULL OR tenant_id = ?)
+                  AND is_deleted = false
+                """);
+
+        List<Object> params = new ArrayList<>();
+        params.add(tenantId);
+        params.add(tenantId);
+
+        if (tenderType != null && !tenderType.equalsIgnoreCase("ALL") && !tenderType.isBlank()) {
+            sql.append(" AND UPPER(tender_type) = UPPER(?) ");
+            params.add(tenderType);
+        }
+        if (sector != null && !sector.equalsIgnoreCase("ALL") && !sector.isBlank()) {
+            sql.append(" AND UPPER(industry_sector) = UPPER(?) ");
+            params.add(sector);
+        }
+        if (quarter != null && !quarter.equalsIgnoreCase("ALL") && !quarter.isBlank()) {
+            sql.append(" AND to_char(created_at, 'YYYY-\"Q\"Q') LIKE ? ");
+            params.add("%" + quarter + "%");
+        }
+
+        sql.append(" ORDER BY created_at DESC LIMIT 50 ");
+
         List<ItemizedTenderPerformanceDto> list = new ArrayList<>();
-
-        list.add(ItemizedTenderPerformanceDto.builder()
-                .id("ten-001")
-                .projectCode("BID-2026-EVN-001")
-                .projectName("Cung cấp Máy biến áp 220kV TBA Tây Hà Nội")
-                .tenderType("TENANT_PARTICIPATING")
-                .industrySector("ENERGY_POWER")
-                .investorName("Tổng Công Ty Truyền Tải Điện Quốc Gia (EVNNPT)")
-                .status("WON")
-                .budgetVnd(new BigDecimal("48000000000"))
-                .bidAwardValueVnd(new BigDecimal("41353725000"))
-                .savingsVnd(new BigDecimal("6646275000"))
-                .savingsPercent(13.8)
-                .winningVendor("TBEA Co., Ltd (Trung Quốc)")
-                .leadTimeStatus("ON_TIME")
-                .completionQuarter("Q2/2026")
-                .build());
-
-        list.add(ItemizedTenderPerformanceDto.builder()
-                .id("ten-002")
-                .projectCode("BID-2026-PVN-008")
-                .projectName("Cung cấp Thiết bị Van điều khiển Nhà máy Đạm Cà Mau")
-                .tenderType("TENANT_PARTICIPATING")
-                .industrySector("OIL_GAS")
-                .investorName("Công ty Cổ phần Phân bón Dầu khí Cà Mau (PVCFC)")
-                .status("WON")
-                .budgetVnd(new BigDecimal("22500000000"))
-                .bidAwardValueVnd(new BigDecimal("19250000000"))
-                .savingsVnd(new BigDecimal("3250000000"))
-                .savingsPercent(14.4)
-                .winningVendor("Flowserve Corporation (Hà Lan)")
-                .leadTimeStatus("EARLY")
-                .completionQuarter("Q2/2026")
-                .build());
-
-        list.add(ItemizedTenderPerformanceDto.builder()
-                .id("ten-003")
-                .projectCode("TEN-2026-BUY-012")
-                .projectName("Mua Sắm Vật Tư Cáp Điện Trung Thế & Tủ Phân Phối")
-                .tenderType("TENANT_ISSUED")
-                .industrySector("ENERGY_POWER")
-                .investorName("Ban Quản Lý Dự Án Lưới Điện Miền Bắc")
-                .status("WON")
-                .budgetVnd(new BigDecimal("9500000000"))
-                .bidAwardValueVnd(new BigDecimal("7800000000"))
-                .savingsVnd(new BigDecimal("1700000000"))
-                .savingsPercent(17.9)
-                .winningVendor("Công Ty Cổ Phần Dây Cáp Điện Việt Nam (CADIVI)")
-                .leadTimeStatus("ON_TIME")
-                .completionQuarter("Q3/2026")
-                .build());
-
-        list.add(ItemizedTenderPerformanceDto.builder()
-                .id("ten-004")
-                .projectCode("BID-2026-VTL-015")
-                .projectName("Hạ tầng Trạm Nguồn Điện Trung Tâm Dữ liệu Viettel Cloud")
-                .tenderType("TENANT_PARTICIPATING")
-                .industrySector("TELECOM_DC")
-                .investorName("Tổng Công Ty Mạng Lưới Viettel (Viettel Networks)")
-                .status("IN_PROGRESS")
-                .budgetVnd(new BigDecimal("38000000000"))
-                .bidAwardValueVnd(new BigDecimal("34500000000"))
-                .savingsVnd(new BigDecimal("3500000000"))
-                .savingsPercent(9.2)
-                .winningVendor("Schneider Electric SE (Pháp)")
-                .leadTimeStatus("ON_TIME")
-                .completionQuarter("Q3/2026")
-                .build());
-
-        if (tenderType != null && !tenderType.equalsIgnoreCase("ALL")) {
-            list.removeIf(item -> !item.getTenderType().equalsIgnoreCase(tenderType));
+        try {
+            jdbcTemplate.query(java.util.Objects.requireNonNull(sql.toString()), ps -> {
+                for (int i = 0; i < params.size(); i++) {
+                    ps.setObject(i + 1, params.get(i));
+                }
+            }, rs -> {
+                list.add(ItemizedTenderPerformanceDto.builder()
+                        .id(rs.getString("id"))
+                        .projectCode(rs.getString("code"))
+                        .projectName(rs.getString("name"))
+                        .tenderType(rs.getString("tender_type"))
+                        .industrySector(rs.getString("industry_sector"))
+                        .investorName(rs.getString("investor_name"))
+                        .status(rs.getString("status"))
+                        .budgetVnd(rs.getBigDecimal("estimated_budget"))
+                        .bidAwardValueVnd(rs.getBigDecimal("estimated_budget"))
+                        .savingsVnd(BigDecimal.ZERO)
+                        .savingsPercent(0.0)
+                        .winningVendor(null)
+                        .leadTimeStatus("ON_TRACK")
+                        .completionQuarter(rs.getString("completion_quarter"))
+                        .build());
+            });
+        } catch (Exception e) {
+            log.warn("Error fetching itemized tenders: {}", e.getMessage());
         }
-        if (sector != null && !sector.equalsIgnoreCase("ALL")) {
-            list.removeIf(item -> !item.getIndustrySector().equalsIgnoreCase(sector));
-        }
-        if (quarter != null && !quarter.equalsIgnoreCase("ALL")) {
-            list.removeIf(item -> !item.getCompletionQuarter().contains(quarter));
-        }
-
         return list;
     }
 
+    @Transactional(readOnly = true)
     public List<CategorySpendDto> getCategorySpend(UUID tenantId) {
+        String sql = """
+                SELECT 
+                    COALESCE(incoterm, 'STANDARD') AS category_code,
+                    COUNT(*) AS rfq_count,
+                    COALESCE(SUM(total_quote_amount), 0) AS total_spend
+                FROM rfqs
+                WHERE (? IS NULL OR tenant_id = ?)
+                  AND is_deleted = false
+                GROUP BY incoterm
+                ORDER BY total_spend DESC
+                """;
+
         List<CategorySpendDto> list = new ArrayList<>();
-        list.add(new CategorySpendDto("CAT-POWER-TRAFO", "Máy Biến Áp Lực & Thiết Bị Cao Thế (220kV/110kV)", new BigDecimal("86000000000"), 14, 5, 12.5, "Siemens Energy AG / TBEA Co., Ltd", "LOW"));
-        list.add(new CategorySpendDto("CAT-OIL-VALVE", "Hệ Thống Van Điều Khiển Áp Suất Cao & Đo Lường Khí", new BigDecimal("42000000000"), 8, 4, 14.4, "Emerson Electric / Flowserve Corporation", "LOW"));
-        list.add(new CategorySpendDto("CAT-TELECOM-GENSET", "Máy Phát Điện Dự Phòng & Tủ Nguồn Trung Tâm Dữ Liệu", new BigDecimal("38000000000"), 6, 3, 9.2, "Cummins Inc. / Schneider Electric", "MEDIUM"));
-        list.add(new CategorySpendDto("CAT-CABLE-SWITCH", "Cáp Điện Trung Thế & Tủ Phân Phối Trung Thế RMU", new BigDecimal("20000000000"), 5, 4, 17.9, "CADIVI / LS Cable & System", "LOW"));
+        try {
+            jdbcTemplate.query(sql, ps -> {
+                ps.setObject(1, tenantId);
+                ps.setObject(2, tenantId);
+            }, rs -> {
+                String code = rs.getString("category_code");
+                int count = rs.getInt("rfq_count");
+                BigDecimal spend = rs.getBigDecimal("total_spend");
+
+                list.add(new CategorySpendDto(
+                        code,
+                        code,
+                        spend,
+                        count,
+                        0,
+                        0.0,
+                        null,
+                        "LOW"
+                ));
+            });
+        } catch (Exception e) {
+            log.warn("Error fetching category spend: {}", e.getMessage());
+        }
         return list;
     }
 
+    @Transactional(readOnly = true)
     public List<VendorPerformanceDto> getVendorPerformance(UUID tenantId) {
+        String sql = """
+                SELECT 
+                    id,
+                    code,
+                    name,
+                    country,
+                    total_quotes_submitted,
+                    total_won_bids,
+                    rating
+                FROM supplier_partners
+                WHERE (? IS NULL OR tenant_id = ?)
+                  AND is_deleted = false
+                ORDER BY total_won_bids DESC, rating DESC
+                LIMIT 20
+                """;
+
         List<VendorPerformanceDto> list = new ArrayList<>();
-        list.add(new VendorPerformanceDto("vnd-siemens", "VND-SIEMENS-DE", "Siemens Energy AG (CHLB Đức)", "CHLB Đức", 16, 13, 81.3, 100.0, 96.5, new BigDecimal("1450000"), 94.8, "TIER_1_STRATEGIC"));
-        list.add(new VendorPerformanceDto("vnd-tbea", "VND-TBEA-CN", "TBEA Co., Ltd (Trung Quốc)", "Trung Quốc", 14, 11, 78.6, 98.2, 94.0, new BigDecimal("1820000"), 92.5, "TIER_1_STRATEGIC"));
-        list.add(new VendorPerformanceDto("vnd-emerson", "VND-EMERSON-US", "Emerson Electric Co. (Hoa Kỳ)", "Hoa Kỳ", 10, 8, 80.0, 100.0, 91.0, new BigDecimal("980000"), 91.0, "TIER_1_STRATEGIC"));
-        list.add(new VendorPerformanceDto("vnd-lscable", "VND-LSCABLE-KR", "LS Cable & System Ltd (Hàn Quốc)", "Hàn Quốc", 12, 9, 75.0, 100.0, 98.0, new BigDecimal("820000"), 93.2, "TIER_1_STRATEGIC"));
-        list.add(new VendorPerformanceDto("vnd-abb", "VND-ABB-CH", "ABB Power Grids Switzerland Ltd (Thụy Sĩ)", "Thụy Sĩ", 9, 7, 77.8, 97.5, 95.5, new BigDecimal("640000"), 90.5, "TIER_2_PREFERRED"));
-        list.add(new VendorPerformanceDto("vnd-mibidheavy", "VND-MIBID-HEAVY", "MIBID Heavy Industries (Việt Nam)", "Việt Nam", 8, 7, 87.5, 100.0, 100.0, new BigDecimal("750000"), 96.0, "TIER_1_STRATEGIC"));
+        try {
+            jdbcTemplate.query(sql, ps -> {
+                ps.setObject(1, tenantId);
+                ps.setObject(2, tenantId);
+            }, rs -> {
+                int submitted = rs.getInt("total_quotes_submitted");
+                int won = rs.getInt("total_won_bids");
+                double winRate = submitted > 0 ? Math.round((won * 100.0 / submitted) * 10.0) / 10.0 : 0.0;
+                double rating = rs.getDouble("rating");
+
+                list.add(new VendorPerformanceDto(
+                        rs.getString("id"),
+                        rs.getString("code"),
+                        rs.getString("name"),
+                        rs.getString("country"),
+                        submitted,
+                        won,
+                        winRate,
+                        100.0,
+                        100.0,
+                        BigDecimal.ZERO,
+                        rating * 20.0,
+                        rating >= 4.5 ? "TIER_1_STRATEGIC" : "TIER_2_PREFERRED"
+                ));
+            });
+        } catch (Exception e) {
+            log.warn("Error fetching vendor performance: {}", e.getMessage());
+        }
         return list;
     }
 
+    @Transactional(readOnly = true)
     public List<DepartmentWorkloadItemDto> getDepartmentWorkload(UUID tenantId) {
+        String sql = """
+                SELECT 
+                    department_code,
+                    COUNT(*) AS tasks_total,
+                    COUNT(CASE WHEN UPPER(status) IN ('DONE', 'COMPLETED') THEN 1 END) AS tasks_completed
+                FROM tasks
+                WHERE (? IS NULL OR tenant_id = ?)
+                  AND is_deleted = false
+                GROUP BY department_code
+                ORDER BY tasks_total DESC
+                """;
+
         List<DepartmentWorkloadItemDto> list = new ArrayList<>();
-        list.add(new DepartmentWorkloadItemDto("TECHNICAL", "Phòng Kỹ Thuật & Giải Pháp", 48, 46, 95.8, 4.2, 2.1));
-        list.add(new DepartmentWorkloadItemDto("COMMERCIAL", "Phòng Thương Mại & Mua Sắm Sourcing", 64, 60, 93.8, 5.6, 3.5));
-        list.add(new DepartmentWorkloadItemDto("FINANCE", "Phòng Tài Chính Kế Toán & Bảo Lãnh", 36, 35, 97.2, 2.8, 0.0));
-        list.add(new DepartmentWorkloadItemDto("LEGAL", "Phòng Pháp Chế & Quản Trị Hợp Đồng", 28, 26, 92.9, 5.1, 1.8));
+        try {
+            jdbcTemplate.query(sql, ps -> {
+                ps.setObject(1, tenantId);
+                ps.setObject(2, tenantId);
+            }, rs -> {
+                String dept = rs.getString("department_code");
+                int total = rs.getInt("tasks_total");
+                int completed = rs.getInt("tasks_completed");
+                double onTime = total > 0 ? Math.round((completed * 100.0 / total) * 10.0) / 10.0 : 0.0;
+
+                list.add(new DepartmentWorkloadItemDto(
+                        dept,
+                        dept,
+                        total,
+                        completed,
+                        onTime,
+                        0.0,
+                        0.0
+                ));
+            });
+        } catch (Exception e) {
+            log.warn("Error fetching department workload: {}", e.getMessage());
+        }
         return list;
+    }
+
+    private BigDecimal getConfigDecimal(String key, BigDecimal defaultValue) {
+        try {
+            String val = jdbcTemplate.queryForObject(
+                    "SELECT config_value FROM system_config WHERE config_key = ? AND is_active = true",
+                    String.class,
+                    key
+            );
+            return val != null && !val.isBlank() ? new BigDecimal(val.trim()) : defaultValue;
+        } catch (Exception e) {
+            return defaultValue;
+        }
+    }
+
+    private Double getConfigDouble(String key, Double defaultValue) {
+        try {
+            String val = jdbcTemplate.queryForObject(
+                    "SELECT config_value FROM system_config WHERE config_key = ? AND is_active = true",
+                    String.class,
+                    key
+            );
+            return val != null && !val.isBlank() ? Double.parseDouble(val.trim()) : defaultValue;
+        } catch (Exception e) {
+            return defaultValue;
+        }
+    }
+
+    private Integer getConfigInt(String key, Integer defaultValue) {
+        try {
+            String val = jdbcTemplate.queryForObject(
+                    "SELECT config_value FROM system_config WHERE config_key = ? AND is_active = true",
+                    String.class,
+                    key
+            );
+            return val != null && !val.isBlank() ? Integer.parseInt(val.trim()) : defaultValue;
+        } catch (Exception e) {
+            return defaultValue;
+        }
     }
 }

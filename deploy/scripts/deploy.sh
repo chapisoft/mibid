@@ -7,7 +7,7 @@ cd "$(dirname "$0")/.."
 
 echo "[INFO] Kéo hình ảnh và khởi động các container..."
 docker compose pull || true
-docker compose up -d --remove-orphans
+docker compose up -d --build --remove-orphans
 
 echo "[INFO] Kiểm tra trạng thái các dịch vụ..."
 docker compose ps

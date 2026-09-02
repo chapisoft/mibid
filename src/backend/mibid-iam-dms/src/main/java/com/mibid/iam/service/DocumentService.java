@@ -1,7 +1,6 @@
 package com.mibid.iam.service;
 
-import com.mibid.core.exception.AppException;
-import com.mibid.core.exception.ErrorCode;
+import com.mibid.core.domain.enums.DocApprovalStatus;
 import com.mibid.iam.domain.Document;
 import com.mibid.iam.repository.DocumentRepository;
 import com.mibid.s3.service.S3StorageService;
@@ -36,7 +35,7 @@ public class DocumentService {
         private long fileSizeBytes;
         private LocalDate effectiveFrom;
         private LocalDate expiresAt;
-        private long daysUntilExpiration;
+        private Long daysUntilExpiration;
         private boolean isExpiringSoon; // true nếu < 30 ngày
         private String approvalStatus;
         private String downloadUrl;
@@ -61,7 +60,7 @@ public class DocumentService {
 
     @Transactional
     public Document uploadDocumentMetadata(Document document) {
-        document.setApprovalStatus("APPROVED");
+        document.setApprovalStatus(DocApprovalStatus.APPROVED.name());
         return documentRepository.save(document);
     }
 
@@ -71,8 +70,8 @@ public class DocumentService {
     }
 
     private DocumentDto toDto(Document doc, LocalDate now) {
-        long daysUntil = doc.getExpiresAt() != null ? ChronoUnit.DAYS.between(now, doc.getExpiresAt()) : 9999;
-        boolean expiring = daysUntil >= 0 && daysUntil <= 30;
+        Long daysUntil = doc.getExpiresAt() != null ? ChronoUnit.DAYS.between(now, doc.getExpiresAt()) : null;
+        boolean expiring = daysUntil != null && daysUntil >= 0 && daysUntil <= 30;
 
         return DocumentDto.builder()
                 .id(doc.getId())

@@ -28,13 +28,13 @@ public class RedissonLockManager {
             acquired = lock.tryLock(waitTimeSec, leaseTimeSec, TimeUnit.SECONDS);
             if (!acquired) {
                 log.warn("Không thể chiếm giữ khóa phân tán [Key: {}] sau {}s", lockKey, waitTimeSec);
-                throw new AppException(ErrorCode.GATEKEEPER_LOCK_BUSY, "Hệ thống đang xử lý tác vụ khác trên gói thầu này, vui lòng thử lại sau");
+                throw new AppException(ErrorCode.GATEKEEPER_LOCK_BUSY);
             }
             log.debug("Đã chiếm giữ khóa phân tán thành công: {}", lockKey);
             return supplier.get();
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
-            throw new AppException(ErrorCode.INTERNAL_SERVER_ERROR, "Tiến trình chiếm giữ khóa phân tán bị gián đoạn", e);
+            throw new AppException(ErrorCode.INTERNAL_SERVER_ERROR, "error.lock.interrupted", e);
         } finally {
             if (acquired && lock.isHeldByCurrentThread()) {
                 lock.unlock();

@@ -20,8 +20,8 @@ import java.time.LocalDateTime;
 @Table(name = "rfqs")
 public class Rfq extends BaseEntity {
 
-    @Column(name = "project_id", length = 100)
-    private String projectId;
+    @Column(name = "project_id")
+    private java.util.UUID projectId;
 
     @Column(name = "project_name", length = 255)
     private String projectName;
@@ -58,4 +58,57 @@ public class Rfq extends BaseEntity {
 
     @Column(name = "status", nullable = false, length = 32)
     private String status; // DRAFT, ISSUED, QUOTED, CLOSED, CANCELLED
+
+    @Column(name = "rfq_code", length = 50)
+    private String rfqCode;
+
+    @Column(name = "incoterms", length = 10)
+    private String incoterms;
+
+    @Column(name = "deadline")
+    private LocalDateTime deadline;
+
+    @Column(name = "shipping_method", length = 30)
+    private String shippingMethod;
+
+    @Column(name = "evaluation_method", length = 30)
+    private String evaluationMethod;
+
+    @Column(name = "quote_validity_days")
+    private Integer quoteValidityDays;
+
+    @Column(name = "rfq_round")
+    private Integer rfqRound;
+
+    @PrePersist
+    @Override
+    public void prePersist() {
+        super.prePersist();
+        if (this.rfqCode == null && this.code != null) {
+            this.rfqCode = this.code;
+        } else if (this.code == null && this.rfqCode != null) {
+            this.code = this.rfqCode;
+        }
+        if (this.incoterms == null) {
+            this.incoterms = this.incoterm != null ? this.incoterm : "CIF";
+        }
+        if (this.deadline == null) {
+            this.deadline = this.submissionDeadline != null ? this.submissionDeadline : LocalDateTime.now().plusDays(7);
+        }
+        if (this.shippingMethod == null) {
+            this.shippingMethod = "SEA";
+        }
+        if (this.evaluationMethod == null) {
+            this.evaluationMethod = "LOWEST_PRICE";
+        }
+        if (this.quoteValidityDays == null) {
+            this.quoteValidityDays = 30;
+        }
+        if (this.rfqRound == null) {
+            this.rfqRound = 1;
+        }
+        if (this.getCreatedBy() == null && com.mibid.core.context.TenantContextHolder.getUserId() != null) {
+            this.setCreatedBy(com.mibid.core.context.TenantContextHolder.getUserId());
+        }
+    }
 }

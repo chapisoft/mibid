@@ -1,5 +1,6 @@
 package com.mibid.logistics.service;
 
+import com.mibid.core.domain.enums.ShipmentStatus;
 import com.mibid.core.exception.AppException;
 import com.mibid.core.exception.ErrorCode;
 import com.mibid.logistics.domain.ShipmentEntity;
@@ -9,7 +10,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -31,7 +31,7 @@ public class ShipmentService {
     @Transactional(readOnly = true)
     public ShipmentEntity getShipmentById(UUID id, UUID tenantId) {
         return shipmentRepository.findByIdAndTenantIdAndIsDeletedFalse(id, tenantId)
-                .orElseThrow(() -> new AppException(ErrorCode.RESOURCE_NOT_FOUND, "Không tìm thấy vận đơn: " + id));
+                .orElseThrow(() -> new AppException(ErrorCode.RESOURCE_NOT_FOUND, "error.shipment.notFound"));
     }
 
     @Transactional
@@ -39,7 +39,7 @@ public class ShipmentService {
         if (tenantId != null) {
             shipment.setTenantId(tenantId);
         } else if (shipment.getTenantId() == null) {
-            shipment.setTenantId(UUID.fromString("11111111-1111-1111-1111-111111111111"));
+            throw new AppException(ErrorCode.UNAUTHORIZED, "error.shipment.tenantIdRequired");
         }
 
         if (shipment.getMilestones() == null || shipment.getMilestones().isEmpty()) {
@@ -55,6 +55,7 @@ public class ShipmentService {
     }
 
     @Transactional
+    @SuppressWarnings("null")
     public ShipmentEntity updateShipment(UUID id, ShipmentEntity updates, UUID tenantId) {
         ShipmentEntity existing = getShipmentById(id, tenantId);
 
@@ -95,52 +96,59 @@ public class ShipmentService {
 
     private List<ShipmentMilestoneEntity> createDefaultMilestones(ShipmentEntity shipment) {
         List<ShipmentMilestoneEntity> list = new ArrayList<>();
-        LocalDate now = LocalDate.now();
 
         list.add(ShipmentMilestoneEntity.builder()
                 .shipment(shipment)
+                .tenantId(shipment.getTenantId())
                 .code("M1_ETD")
-                .name("Rời cảng xếp hàng (POL)")
-                .status("COMPLETED")
-                .plannedDate(shipment.getEtd() != null ? shipment.getEtd() : now.minusDays(10))
-                .actualDate(shipment.getEtd() != null ? shipment.getEtd() : now.minusDays(10))
+                .name("milestone.pol.name")
+                .status(ShipmentStatus.PENDING.name())
+                .plannedDate(shipment.getEtd())
+                .actualDate(null)
                 .seqOrder(1)
                 .build());
 
         list.add(ShipmentMilestoneEntity.builder()
                 .shipment(shipment)
+                .tenantId(shipment.getTenantId())
                 .code("M2_TRANSIT")
-                .name("Đang hành trình trên biển")
-                .status("IN_PROGRESS")
-                .plannedDate(now.minusDays(5))
-                .actualDate(now.minusDays(5))
+                .name("milestone.transit.name")
+                .status(ShipmentStatus.PENDING.name())
+                .plannedDate(null)
+                .actualDate(null)
                 .seqOrder(2)
                 .build());
 
         list.add(ShipmentMilestoneEntity.builder()
                 .shipment(shipment)
+                .tenantId(shipment.getTenantId())
                 .code("M3_ETA")
-                .name("Cập cảng dỡ hàng (POD)")
-                .status("PENDING")
-                .plannedDate(shipment.getEta() != null ? shipment.getEta() : now.plusDays(10))
+                .name("milestone.pod.name")
+                .status(ShipmentStatus.PENDING.name())
+                .plannedDate(shipment.getEta())
+                .actualDate(null)
                 .seqOrder(3)
                 .build());
 
         list.add(ShipmentMilestoneEntity.builder()
                 .shipment(shipment)
+                .tenantId(shipment.getTenantId())
                 .code("M4_CUSTOMS")
-                .name("Thông quan hải quan")
-                .status("PENDING")
-                .plannedDate(shipment.getEta() != null ? shipment.getEta().plusDays(2) : now.plusDays(12))
+                .name("milestone.customs.name")
+                .status(ShipmentStatus.PENDING.name())
+                .plannedDate(null)
+                .actualDate(null)
                 .seqOrder(4)
                 .build());
 
         list.add(ShipmentMilestoneEntity.builder()
                 .shipment(shipment)
+                .tenantId(shipment.getTenantId())
                 .code("M5_DELIVERY")
-                .name("Giao hàng tại chân công trình")
-                .status("PENDING")
-                .plannedDate(shipment.getContractDeadline() != null ? shipment.getContractDeadline() : now.plusDays(15))
+                .name("milestone.delivery.name")
+                .status(ShipmentStatus.PENDING.name())
+                .plannedDate(shipment.getContractDeadline())
+                .actualDate(null)
                 .seqOrder(5)
                 .build());
 

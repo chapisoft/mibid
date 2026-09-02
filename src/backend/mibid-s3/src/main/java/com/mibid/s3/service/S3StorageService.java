@@ -1,5 +1,7 @@
 package com.mibid.s3.service;
 
+import com.mibid.core.exception.AppException;
+import com.mibid.core.exception.ErrorCode;
 import io.minio.GetPresignedObjectUrlArgs;
 import io.minio.MinioClient;
 import io.minio.http.Method;
@@ -34,8 +36,8 @@ public class S3StorageService {
                             .build()
             );
         } catch (Exception e) {
-            log.error("Không thể tạo Pre-signed URL cho upload [ObjectKey: {}]: ", objectKey, e);
-            throw new RuntimeException("Lỗi khởi tạo liên kết tải lên S3", e);
+            log.error("Failed to generate pre-signed upload URL for [ObjectKey: {}]: ", objectKey, e);
+            throw new AppException(ErrorCode.INTERNAL_SERVER_ERROR, "error.s3.uploadFailed");
         }
     }
 
@@ -50,8 +52,8 @@ public class S3StorageService {
                             .build()
             );
         } catch (Exception e) {
-            log.error("Không thể tạo Pre-signed URL cho download [ObjectKey: {}]: ", objectKey, e);
-            throw new RuntimeException("Lỗi khởi tạo liên kết tải xuống S3", e);
+            log.error("Failed to generate pre-signed download URL for [ObjectKey: {}]: ", objectKey, e);
+            throw new AppException(ErrorCode.INTERNAL_SERVER_ERROR, "error.s3.downloadFailed");
         }
     }
 }

@@ -1,5 +1,6 @@
 package com.mibid.workflow.domain;
 
+import com.mibid.core.domain.enums.WorkflowStatus;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
@@ -35,7 +36,7 @@ public class WorkflowDefinitionEntity {
 
     @Column(name = "status", length = 50)
     @Builder.Default
-    private String status = "ACTIVE";
+    private String status = WorkflowStatus.ACTIVE.name();
 
     @Column(name = "tenant_id")
     private UUID tenantId;

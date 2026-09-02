@@ -58,7 +58,7 @@ public class Task extends BaseEntity {
     private boolean isMandatory;
 
     @Column(name = "status", nullable = false, length = 32)
-    private String status; // TODO, IN_PROGRESS, REVIEW, DONE
+    private String status; // Trạng thái nhiệm vụ (tham chiếu enum TaskStatus)
 
     @Column(name = "clarification_count")
     private Integer clarificationCount;
@@ -71,4 +71,10 @@ public class Task extends BaseEntity {
 
     @Column(name = "completed_at")
     private LocalDateTime completedAt;
+
+    @Column(name = "evidence_docs", columnDefinition = "jsonb")
+    private String evidenceDocs;
+
+    @Column(name = "gate_checklists", columnDefinition = "jsonb")
+    private String gateChecklists;
 }

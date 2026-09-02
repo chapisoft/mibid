@@ -72,6 +72,15 @@ public class JwtAuthFilter extends OncePerRequestFilter {
             }
         }
 
+        if (TenantContextHolder.getTenantId() == null) {
+            String tenantHeader = request.getHeader("X-Tenant-Id");
+            if (tenantHeader != null && !tenantHeader.isBlank()) {
+                try {
+                    TenantContextHolder.setTenantId(UUID.fromString(tenantHeader.trim()));
+                } catch (IllegalArgumentException ignored) {}
+            }
+        }
+
         try {
             filterChain.doFilter(request, response);
         } finally {

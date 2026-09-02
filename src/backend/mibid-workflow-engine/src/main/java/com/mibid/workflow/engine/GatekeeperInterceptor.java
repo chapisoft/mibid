@@ -36,8 +36,7 @@ public class GatekeeperInterceptor {
                     // Lưu vết vào bypass_approval_logs
                 } else {
                     log.error("Chặn chuyển bước (HARD STOP) Dự án {}. Thiếu chứng từ bắt buộc: {}", projectId, missingDocuments);
-                    throw new AppException(ErrorCode.GATEKEEPER_HARD_STOP,
-                            "Chặn chuyển bước: Thiếu các tài liệu bắt buộc sau: " + String.join(", ", missingDocuments));
+                    throw new AppException(ErrorCode.GATEKEEPER_HARD_STOP, "error.gatekeeperHardStop");
                 }
             }
             log.info("Chuyển bước thành công cho Dự án: {}", projectId);

@@ -99,3 +99,28 @@ mibid/
 ├── .gitignore                                      # Cấu hình loại trừ file tạm
 └── README.md                                       # Tài liệu tổng quan dự án
 ```
+
+---
+
+## 4. DỮ LIỆU KIỂM THỬ & TRẢI NGHIỆM HỆ THỐNG (DEMO / UAT CREDENTIALS)
+
+Toàn bộ ứng dụng Frontend Next.js 14 WebApp đang hoạt động tại cổng **`http://localhost:3000/`**. Quý đối tác và chuyên viên có thể trải nghiệm trực tiếp theo 2 vai trò:
+
+### 4.1. Trải Nghiệm Cổng Nhà Cung Cấp (Vendor B2B Portal)
+* **Đường dẫn Cổng:** `http://localhost:3000/vendor`
+* **Nhà cung cấp:** `Siemens AG (Đức / EU)`
+* **Mã Mời Thầu (Invitation Code):** `RFQ-2026-MBA-SIEMENS`
+* **Mã PIN Bảo Mật (6 số):** `882109`
+* **Đường dẫn Magic Link mở trực tiếp:** 
+  [`http://localhost:3000/vendor/rfq/RFQ-2026-MBA-SIEMENS`](http://localhost:3000/vendor/rfq/RFQ-2026-MBA-SIEMENS)
+* **Kịch bản kiểm thử bảo mật & nghiệp vụ:**
+  1. *Đúng PIN (`882109`):* Mở khóa biểu mẫu Báo giá, điền đơn giá ngoại tệ (USD/EUR), chọn Incoterms (CIF/FOB), đính kèm chứng chỉ CO/CQ và nộp hồ sơ.
+  2. *Sai PIN (1 – 2 lần):* Hệ thống highlight viền đỏ, rung phản hồi và đếm lùi số lần thử.
+  3. *Sai PIN lần 3:* Tự động kích hoạt thêm lớp bảo vệ CAPTCHA.
+  4. *Sai PIN 5 lần:* Tự động kích hoạt cơ chế khóa tài khoản tạm thời 15 – 30 phút.
+
+### 4.2. Trải Nghiệm Không Gian Nội Bộ (Staff CMS)
+* **Đường dẫn đăng nhập:** `http://localhost:3000/login`
+* **Tài khoản quản trị:** `admin@mibid.vn`
+* **Mật khẩu:** `admin123`
+

@@ -20,4 +20,5 @@ public interface OutboxEventRepository extends JpaRepository<OutboxEvent, UUID> 
     List<OutboxEvent> findAllByTenantId(@Param("tenantId") UUID tenantId);
 
     long countByStatus(String status);
+    long countByTenantId(UUID tenantId);
 }

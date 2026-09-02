@@ -1,6 +1,7 @@
 package com.mibid.iam.service;
 
 import com.mibid.core.exception.AppException;
+import com.mibid.core.domain.enums.UserStatus;
 import com.mibid.core.exception.ErrorCode;
 import com.mibid.iam.domain.User;
 import com.mibid.iam.repository.UserRepository;
@@ -38,10 +39,10 @@ public class UserService {
     @Transactional(readOnly = true)
     public AuthResponse login(String username, String password) {
         User user = userRepository.findByUsername(username)
-                .orElseThrow(() -> new AppException(ErrorCode.AUTHENTICATION_FAILED, "Tên đăng nhập hoặc mật khẩu không chính xác"));
+                .orElseThrow(() -> new AppException(ErrorCode.AUTHENTICATION_FAILED));
 
-        if (!"ACTIVE".equals(user.getStatus())) {
-            throw new AppException(ErrorCode.USER_ACCOUNT_LOCKED, "Tài khoản người dùng đã bị khóa");
+        if (!UserStatus.ACTIVE.name().equals(user.getStatus())) {
+            throw new AppException(ErrorCode.USER_ACCOUNT_LOCKED);
         }
 
         // Tạo JWT Token

@@ -1,5 +1,6 @@
 package com.mibid.iam.service;
 
+import com.mibid.core.domain.enums.TenantStatus;
 import com.mibid.core.exception.AppException;
 import com.mibid.core.exception.ErrorCode;
 import com.mibid.iam.domain.Tenant;
@@ -27,15 +28,15 @@ public class TenantService {
     @Transactional(readOnly = true)
     public Tenant getTenantById(UUID id) {
         return tenantRepository.findById(id)
-                .orElseThrow(() -> new AppException(ErrorCode.RESOURCE_NOT_FOUND, "Không tìm thấy doanh nghiệp: " + id));
+                .orElseThrow(() -> new AppException(ErrorCode.RESOURCE_NOT_FOUND, "error.tenant.notFound"));
     }
 
     @Transactional
     public Tenant createTenant(Tenant tenant) {
         if (tenantRepository.findByCode(tenant.getCode()).isPresent()) {
-            throw new AppException(ErrorCode.RESOURCE_CONFLICT, "Mã doanh nghiệp đã tồn tại: " + tenant.getCode());
+            throw new AppException(ErrorCode.RESOURCE_CONFLICT, "error.tenant.codeConflict");
         }
-        tenant.setStatus("ACTIVE");
+        tenant.setStatus(TenantStatus.ACTIVE.name());
         return tenantRepository.save(tenant);
     }
 

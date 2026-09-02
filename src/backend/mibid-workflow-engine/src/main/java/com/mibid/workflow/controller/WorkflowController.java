@@ -28,6 +28,20 @@ public class WorkflowController {
         return ResponseEntity.ok(ResultResponse.success(workflowService.getTemplates()));
     }
 
+    @PostMapping("/templates")
+    public ResponseEntity<ResultResponse<WorkflowDefinitionService.WorkflowTemplateDto>> createTemplate(
+            @RequestBody WorkflowDefinitionService.WorkflowTemplateDto dto) {
+        return ResponseEntity.ok(ResultResponse.success(workflowService.saveTemplate(dto)));
+    }
+
+    @PutMapping("/templates/{id}")
+    public ResponseEntity<ResultResponse<WorkflowDefinitionService.WorkflowTemplateDto>> updateTemplate(
+            @PathVariable UUID id,
+            @RequestBody WorkflowDefinitionService.WorkflowTemplateDto dto) {
+        dto.setId(id.toString());
+        return ResponseEntity.ok(ResultResponse.success(workflowService.saveTemplate(dto)));
+    }
+
     @GetMapping("/{id}")
     public ResponseEntity<ResultResponse<WorkflowDefinitionService.WorkflowDto>> getWorkflowById(@PathVariable UUID id) {
         return ResponseEntity.ok(ResultResponse.success(workflowService.getWorkflowById(id)));

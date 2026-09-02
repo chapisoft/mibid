@@ -1,6 +1,8 @@
 package com.mibid.outbox.service;
 
 import com.mibid.outbox.domain.FileSyncLogEntity;
+import com.mibid.core.domain.enums.FileSyncStatus;
+import com.mibid.core.domain.enums.OutboxEventStatus;
 import com.mibid.outbox.domain.IntegrationEndpointEntity;
 import com.mibid.outbox.domain.OutboxEvent;
 import com.mibid.outbox.dto.DlqRetryCommand;
@@ -23,6 +25,7 @@ import java.util.stream.Collectors;
 @Slf4j
 @Service
 @RequiredArgsConstructor
+@SuppressWarnings("null")
 public class IntegrationService implements IntegrationUseCase {
 
     private final IntegrationEndpointRepository endpointRepo;
@@ -34,49 +37,21 @@ public class IntegrationService implements IntegrationUseCase {
     public IntegrationHubStatsDto getIntegrationStats(UUID tenantId) {
         List<IntegrationEndpointEntity> endpoints = endpointRepo.findAllByTenantId(tenantId);
         long dlqCount = outboxRepo.countByStatus("DLQ");
+        long totalEvents = tenantId != null ? outboxRepo.countByTenantId(tenantId) : outboxRepo.count();
         List<FileSyncLogEntity> fileLogs = fileSyncLogRepo.findAllByTenantIdOrderByCreatedAtDesc(tenantId);
 
         int successJobs = (int) fileLogs.stream().filter(f -> "SUCCESS".equalsIgnoreCase(f.getStatus()) || "COMPLETED".equalsIgnoreCase(f.getStatus())).count();
 
         return IntegrationHubStatsDto.builder()
                 .activeEndpointsCount((int) endpoints.stream().filter(IntegrationEndpointEntity::isActive).count())
-                .totalKafkaEventsToday(412580L)
-                .kafkaConsumerLag(12)
-                .p99LatencyMs(18.4)
+                .totalKafkaEventsToday(totalEvents)
+                .kafkaConsumerLag(0)
+                .p99LatencyMs(0.0)
                 .sftpJobsSuccessCount(successJobs)
                 .sftpJobsTotalCount(fileLogs.size())
-                .hmacValidityRate(100.0)
+                .hmacValidityRate(fileLogs.isEmpty() ? 100.0 : ((double) successJobs / fileLogs.size()) * 100.0)
                 .dlqEventsCount(dlqCount)
-                .activeTopics(List.of(
-                        IntegrationHubStatsDto.KafkaTopicInfoDto.builder()
-                                .topic("mibid.rfq.inbound")
-                                .type("INBOUND")
-                                .messagesTotal(148200L)
-                                .lag(8)
-                                .status("HEALTHY")
-                                .build(),
-                        IntegrationHubStatsDto.KafkaTopicInfoDto.builder()
-                                .topic("mibid.awarded-bid.outbound")
-                                .type("OUTBOUND")
-                                .messagesTotal(92450L)
-                                .lag(0)
-                                .status("HEALTHY")
-                                .build(),
-                        IntegrationHubStatsDto.KafkaTopicInfoDto.builder()
-                                .topic("mibid.customs.status.inbound")
-                                .type("INBOUND")
-                                .messagesTotal(110500L)
-                                .lag(4)
-                                .status("HEALTHY")
-                                .build(),
-                        IntegrationHubStatsDto.KafkaTopicInfoDto.builder()
-                                .topic("mibid.po-sync.outbound")
-                                .type("OUTBOUND")
-                                .messagesTotal(61430L)
-                                .lag(0)
-                                .status("HEALTHY")
-                                .build()
-                ))
+                .activeTopics(java.util.Collections.emptyList())
                 .build();
     }
 
@@ -119,7 +94,7 @@ public class IntegrationService implements IntegrationUseCase {
 
     @Override
     public boolean testConnection(UUID tenantId, String id) {
-        log.info("Thực hiện kiểm tra kết nối tới Endpoint ID: {} cho Tenant ID: {}", id, tenantId);
+        log.info("Testing connection to endpoint ID: {} for tenant ID: {}", id, tenantId);
         return true;
     }
 
@@ -129,17 +104,17 @@ public class IntegrationService implements IntegrationUseCase {
         if (command.isRetryAll()) {
             List<OutboxEvent> dlqList = outboxRepo.findAllByTenantIdAndStatusOrderByCreatedAtDesc(tenantId, "DLQ");
             for (OutboxEvent event : dlqList) {
-                event.setStatus("PENDING");
+                event.setStatus(OutboxEventStatus.PENDING.name());
                 event.setRetryCount(0);
                 outboxRepo.save(event);
             }
-            log.info("Đã lên lịch gửi lại {} sự kiện DLQ cho Tenant ID: {}", dlqList.size(), tenantId);
+            log.info("Scheduled retry for {} DLQ events for tenant ID: {}", dlqList.size(), tenantId);
         } else if (command.getEventId() != null) {
             outboxRepo.findById(command.getEventId()).ifPresent(event -> {
-                event.setStatus("PENDING");
+                event.setStatus(OutboxEventStatus.PENDING.name());
                 event.setRetryCount(0);
                 outboxRepo.save(event);
-                log.info("Đã lên lịch gửi lại sự kiện DLQ ID: {}", command.getEventId());
+                log.info("Scheduled retry for DLQ event ID: {}", command.getEventId());
             });
         }
     }
@@ -174,7 +149,7 @@ public class IntegrationService implements IntegrationUseCase {
                 .totalRecords(450)
                 .successCount(450)
                 .errorCount(0)
-                .status("SUCCESS")
+                .status(FileSyncStatus.SUCCESS.name())
                 .createdAt(LocalDateTime.now())
                 .build();
 

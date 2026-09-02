@@ -1,5 +1,6 @@
 package com.mibid.outbox.domain;
 
+import com.mibid.core.domain.enums.OutboxEventStatus;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -43,7 +44,7 @@ public class OutboxEvent {
 
     @Column(name = "status", nullable = false, length = 32)
     @Builder.Default
-    private String status = "PENDING";
+    private String status = OutboxEventStatus.PENDING.name();
 
     @Column(name = "retry_count", nullable = false)
     @Builder.Default

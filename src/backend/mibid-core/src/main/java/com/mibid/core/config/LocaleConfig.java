@@ -19,11 +19,11 @@ import java.util.Locale;
 public class LocaleConfig {
 
     public static final List<Locale> SUPPORTED_LOCALES = List.of(
-            Locale.of("vi"), // Tiếng Việt (Java 21 Locale.of)
-            Locale.ENGLISH,   // English
-            Locale.SIMPLIFIED_CHINESE, // 中文
-            Locale.JAPANESE,  // 日本語
-            Locale.KOREAN     // 한국어
+            Locale.forLanguageTag("vi"), // Tiếng Việt
+            Locale.ENGLISH,              // English
+            Locale.SIMPLIFIED_CHINESE,   // 中文
+            Locale.JAPANESE,             // 日本語
+            Locale.KOREAN                // 한국어
     );
 
     @Bean
@@ -31,7 +31,7 @@ public class LocaleConfig {
     public LocaleResolver localeResolver() {
         AcceptHeaderLocaleResolver resolver = new AcceptHeaderLocaleResolver();
         resolver.setSupportedLocales(SUPPORTED_LOCALES);
-        resolver.setDefaultLocale(Locale.of("vi"));
+        resolver.setDefaultLocale(Locale.forLanguageTag("vi"));
         return resolver;
     }
 

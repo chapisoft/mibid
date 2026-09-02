@@ -53,6 +53,9 @@ public class Project extends BaseEntity {
     @Column(name = "currency", length = 8)
     private String currency; // VND, USD, EUR, JPY, CNY
 
+    @Column(name = "workflow_id")
+    private UUID workflowId;
+
     @Column(name = "current_stage_id")
     private UUID currentStageId;
 

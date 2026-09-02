@@ -11,9 +11,11 @@ Tài liệu này quy định hệ thống nguyên tắc, kiến trúc Hexagonal 
    * **Domain Layer:** Không chứa bất kỳ annotation phụ thuộc framework nào (ngoại trừ bean validation thuần túy).
    * **Application Layer:** Chứa các Use Case Interfaces (Inbound Ports) và Repository/Publisher Interfaces (Outbound Ports). Không viết SQL hay gọi HTTP trực tiếp tại tầng này.
    * **Adapter Layer:** Gồm Adapter In (REST Controller, Kafka Consumer, Scheduler Cron) và Adapter Out (Spring Data JPA, Feign Client, Kafka Publisher).
-2. **Quy chuẩn Không Hardcode Backend (Zero-Hardcode Standard):**
+2. **Quy chuẩn Không Hardcode Backend và Không Điền Giá Trị Mặc Định (Zero-Hardcode Standard & No Fake Defaults):**
    * Tuyệt đối không hardcode chuỗi ký tự, số ma thuật, mã trạng thái hay tham số cấu hình trong mã nguồn.
-   * Toàn bộ trạng thái phải được định nghĩa bằng Domain Enums hoặc Constants tập trung (`ReportConstants`, `SecurityConstants`).
+   * Toàn bộ mã trạng thái, loại dữ liệu, phương thức, mã lỗi, đơn vị tiền tệ, điều khoản thương mại bắt buộc phải được định nghĩa và sử dụng 100% bằng Domain Enums.
+   * Cấm sử dụng chuỗi tự do (String literal) để so sánh điều kiện logic (ví dụ: cấm `if ("ACTIVE".equals(status))`, cấm `if ("SUCCESS".equals(code))`).
+   * **Cấm điền giá trị mặc định khi khởi tạo hoặc trả thông tin đối tượng (Zero Fake Default Values):** Khi tạo Entity, DTO, Request, Response, không được tự ý gán cứng các chuỗi hoặc số giả lập; toàn bộ dữ liệu phải được nạp 100% từ CSDL hoặc Request payload thực tế, nếu không có phải trả về `null` hoặc rỗng.
 3. **Quy chuẩn Import Sạch (Clean 4-Group Imports):**
    * Tuyệt đối không sử dụng tên đầy đủ FQN (`com.mascom.dip...`) trong thân hàm, tham số hay kiểu trả về. Mọi kiểu dữ liệu phải được import ở đầu tệp.
    * Khối import được sắp xếp thành 4 nhóm theo thứ tự:

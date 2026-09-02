@@ -49,6 +49,26 @@ public class SubscriptionManagementController {
         return ResponseEntity.ok(ResultResponse.success(billingService.createPlan(plan)));
     }
 
+    @PutMapping("/plans/{planId}")
+    public ResponseEntity<ResultResponse<SubscriptionPlan>> updatePlan(
+            @PathVariable("planId") String planId,
+            @RequestBody SubscriptionPlan plan) {
+        return ResponseEntity.ok(ResultResponse.success(billingService.updatePlan(planId, plan)));
+    }
+
+    @DeleteMapping("/plans/{planId}")
+    public ResponseEntity<ResultResponse<Void>> deletePlan(@PathVariable("planId") String planId) {
+        billingService.deletePlan(planId);
+        return ResponseEntity.ok(ResultResponse.success(null));
+    }
+
+    @PutMapping("/{subscriptionId}")
+    public ResponseEntity<ResultResponse<SubscriptionBillingService.TenantSubscriptionSummaryDto>> updateSubscription(
+            @PathVariable("subscriptionId") String subscriptionId,
+            @RequestBody SubscriptionBillingService.UpdateSubscriptionRequest request) {
+        return ResponseEntity.ok(ResultResponse.success(billingService.updateSubscription(subscriptionId, request)));
+    }
+
     @GetMapping("/tenant/{tenantId}")
     public ResponseEntity<ResultResponse<SubscriptionBillingService.TenantSubscriptionSummaryDto>> getTenantSubscription(
             @PathVariable("tenantId") String tenantId) {
