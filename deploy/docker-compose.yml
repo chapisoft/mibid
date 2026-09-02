@@ -1,36 +1,159 @@
-name: mibid
+version: '3.8'
+
+# ==============================================================================
+# MIBID ENTERPRISE PRODUCTION DOCKER COMPOSE STACK
+# Target Host: dip@210.211.102.99:65000 (User: dip, Home: /home/dip/mibid/deploy)
+# Upstream Gateway: http://172.18.0.1:18098
+# Domains: bid.microtec.vn (FE) | api-bid.microtec.vn (BE)
+# Network Subnet: mibid-network (Bridge)
+# ==============================================================================
+
+networks:
+  mibid-network:
+    name: mibid-network
+    driver: bridge
+
+volumes:
+  mibid_pg_data:
+    driver: local
+  mibid_redis_data:
+    driver: local
+  mibid_minio_data:
+    driver: local
 
 services:
-  # ============================================================
-  # 1. MIBID BACKEND APPLICATION SERVER (JAVA 21 / SPRING BOOT 3)
-  # ============================================================
-  mibid-backend:
+  # ----------------------------------------------------------------------------
+  # 1. PostgreSQL 15+ — CSDL Đa Thuê Bao Hỗ Trợ Row-Level Security (RLS)
+  # ----------------------------------------------------------------------------
+  postgres:
+    image: postgres:15-alpine
+    container_name: mibid-postgres
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:${POSTGRES_PORT:-15438}:5432"
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-mibid_prod}
+      POSTGRES_USER: ${POSTGRES_USER:-mibid_admin}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-MibidSecurePassword2026!}
+      PGDATA: /var/lib/postgresql/data/pgdata
+    volumes:
+      - ./data/postgres:/var/lib/postgresql/data
+      - ./database:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-mibid_admin} -d ${POSTGRES_DB:-mibid_prod}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 512M
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "3"
+    networks:
+      - mibid-network
+
+  # ----------------------------------------------------------------------------
+  # 2. Redis 7 — Khóa Phân Tán Redisson & Bộ Nhớ Đệm Tốc Độ Cao
+  # ----------------------------------------------------------------------------
+  redis:
+    image: redis:7-alpine
+    container_name: mibid-redis
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes", "--maxmemory", "256mb", "--maxmemory-policy", "volatile-lru"]
+    ports:
+      - "127.0.0.1:${REDIS_PORT:-16388}:6379"
+    volumes:
+      - ./data/redis:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "3"
+    networks:
+      - mibid-network
+
+  # ----------------------------------------------------------------------------
+  # 3. MinIO S3 — Kho Lưu Trữ Chứng Từ Số Hóa DMS & Hồ Sơ Thầu
+  # ----------------------------------------------------------------------------
+  minio:
+    image: minio/minio:RELEASE.2023-08-31T15-31-16Z
+    container_name: mibid-minio
+    restart: unless-stopped
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-mibidadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-MibidMinioSecureKey2026!}
+    ports:
+      - "127.0.0.1:${MINIO_API_PORT:-19008}:9000"
+      - "127.0.0.1:${MINIO_CONSOLE_PORT:-19009}:9001"
+    volumes:
+      - ./data/minio:/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "3"
+    networks:
+      - mibid-network
+
+  # ----------------------------------------------------------------------------
+  # 4. Backend Server — Dịch Vụ Nghiệp Vụ Lõi Lục Giác (Java 21 / Spring Boot 3.3)
+  # ----------------------------------------------------------------------------
+  backend:
     build:
-      context: ../src/backend
+      context: ./backend
       dockerfile: Dockerfile
+      args:
+        JAR_FILE: mibid-server.jar
     image: mibid/backend-server:1.0.0
     container_name: mibid-backend
     restart: unless-stopped
     ports:
-      - "${BACKEND_PORT:-8080}:8080"
+      - "127.0.0.1:${BACKEND_PORT:-18088}:8080"
     environment:
       SPRING_PROFILES_ACTIVE: prod
-      SPRING_DATASOURCE_URL: jdbc:postgresql://mibid-postgres:5432/${POSTGRES_DB:-mibid_prod}
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-mibid_prod}
       SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-mibid_admin}
-      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-MibidSecure2026!}
-      SPRING_DATA_REDIS_HOST: mibid-redis
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-MibidSecurePassword2026!}
+      SPRING_DATA_REDIS_HOST: redis
       SPRING_DATA_REDIS_PORT: 6379
-      MINIO_ENDPOINT: http://mibid-minio:9000
+      MINIO_ENDPOINT: http://minio:9000
       MINIO_ACCESS_KEY: ${MINIO_ROOT_USER:-mibidadmin}
-      MINIO_SECRET_KEY: ${MINIO_ROOT_PASSWORD:-MinioSecure2026!}
-      MIBID_JWT_SECRET: ${MIBID_JWT_SECRET:-MibidSecretKeyForJwtSigningMustBeAtLeast32BytesLong2026!}
-      MIBID_PORTAL_URL: ${MIBID_PORTAL_URL:-http://localhost:3000}
+      MINIO_SECRET_KEY: ${MINIO_ROOT_PASSWORD:-MibidMinioSecureKey2026!}
+      MIBID_JWT_SECRET: ${MIBID_JWT_SECRET:-MibidSuperSecretSigningKeyForEnterpriseProduction2026!}
+      MIBID_PORTAL_URL: ${MIBID_PORTAL_URL:-https://bid.microtec.vn}
+      JAVA_OPTS: "-Xms256m -Xmx512m -XX:+UseG1GC -XX:+ExitOnOutOfMemoryError"
     depends_on:
-      mibid-postgres:
+      postgres:
         condition: service_healthy
-      mibid-redis:
+      redis:
         condition: service_healthy
-      mibid-minio:
+      minio:
         condition: service_started
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8080/actuator/health"]
@@ -38,119 +161,75 @@ services:
       timeout: 5s
       retries: 5
       start_period: 30s
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 512M
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "3"
     networks:
       - mibid-network
 
-  # ============================================================
-  # 2. MIBID FRONTEND WEB APPLICATION (NEXT.JS 14 / REACT)
-  # ============================================================
-  mibid-frontend:
+  # ----------------------------------------------------------------------------
+  # 5. Frontend WebApp — Ứng Dụng Next.js 14 Hợp Nhất (Staff CMS & Vendor Portal)
+  # ----------------------------------------------------------------------------
+  frontend:
     build:
-      context: ../src/frontend/webapp
+      context: ./frontend
       dockerfile: Dockerfile
     image: mibid/frontend-webapp:1.0.0
     container_name: mibid-frontend
     restart: unless-stopped
     ports:
-      - "${FRONTEND_PORT:-3000}:3000"
+      - "127.0.0.1:${FRONTEND_PORT:-13008}:3000"
     environment:
       NODE_ENV: production
       PORT: 3000
-      BACKEND_API_URL: http://mibid-backend:8080
-      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:8080/api/v1}
+      BACKEND_API_URL: http://backend:8080
+      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-https://api-bid.microtec.vn/api/v1}
     depends_on:
-      mibid-backend:
+      backend:
         condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 512M
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "3"
     networks:
       - mibid-network
 
-  # ============================================================
-  # 3. NGINX API GATEWAY & REVERSE PROXY
-  # ============================================================
-  mibid-nginx:
+  # ----------------------------------------------------------------------------
+  # 6. Nginx Gateway — Điều Phối Phân Luồng Ngược & Bảo Mật Nội Bộ Stack
+  # ----------------------------------------------------------------------------
+  nginx:
     image: nginx:alpine
     container_name: mibid-nginx
     restart: unless-stopped
     ports:
-      - "${NGINX_PORT:-80}:80"
+      - "${NGINX_PORT:-18098}:80"
     volumes:
       - ./nginx/nginx.conf:/etc/nginx/conf.d/default.conf:ro
     depends_on:
-      - mibid-frontend
-      - mibid-backend
+      - frontend
+      - backend
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "3"
     networks:
       - mibid-network
-
-  # ============================================================
-  # 4. POSTGRESQL 15+ (Hỗ trợ Multi-tenant Row-Level Security)
-  # ============================================================
-  mibid-postgres:
-    image: postgres:15-alpine
-    container_name: mibid-postgres
-    restart: unless-stopped
-    environment:
-      POSTGRES_DB: ${POSTGRES_DB:-mibid_prod}
-      POSTGRES_USER: ${POSTGRES_USER:-mibid_admin}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-MibidSecure2026!}
-    ports:
-      - "${POSTGRES_PORT:-5432}:5432"
-    volumes:
-      - mibid_pg_data:/var/lib/postgresql/data
-      - ../database/001_init_schema.sql:/docker-entrypoint-initdb.d/01_schema.sql:ro
-      - ../database/002_seed_data.sql:/docker-entrypoint-initdb.d/02_seed.sql:ro
-      - ../database/003_system_admin_saas.sql:/docker-entrypoint-initdb.d/03_system_admin_saas.sql:ro
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-mibid_admin} -d ${POSTGRES_DB:-mibid_prod}"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-    networks:
-      - mibid-network
-
-  # ============================================================
-  # 5. REDIS 7 (Khóa Phân Tán Redisson & Bộ Nhớ Đệm)
-  # ============================================================
-  mibid-redis:
-    image: redis:7-alpine
-    container_name: mibid-redis
-    restart: unless-stopped
-    command: ["redis-server", "--appendonly", "yes", "--maxmemory", "512mb", "--maxmemory-policy", "volatile-lru"]
-    ports:
-      - "${REDIS_PORT:-6379}:6379"
-    volumes:
-      - mibid_redis_data:/data
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 10s
-      timeout: 3s
-      retries: 3
-    networks:
-      - mibid-network
-
-  # ============================================================
-  # 6. MINIO OBJECT STORAGE (Kho Lưu Trữ Chứng Từ S3 DMS)
-  # ============================================================
-  mibid-minio:
-    image: minio/minio:RELEASE.2024-05-10T01-41-38Z
-    container_name: mibid-minio
-    restart: unless-stopped
-    command: server /data --console-address ":9001"
-    environment:
-      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-mibidadmin}
-      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-MinioSecure2026!}
-    ports:
-      - "${MINIO_API_PORT:-9000}:9000"
-      - "${MINIO_CONSOLE_PORT:-9001}:9001"
-    volumes:
-      - mibid_minio_data:/data
-    networks:
-      - mibid-network
-
-volumes:
-  mibid_pg_data:
-  mibid_redis_data:
-  mibid_minio_data:
-
-networks:
-  mibid-network:
-    driver: bridge

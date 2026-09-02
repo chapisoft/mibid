@@ -44,19 +44,19 @@ export function MibidAppIcon({
 }) {
   const sizeClass =
     size === 'sm'
-      ? 'w-7 h-7 rounded-lg'
+      ? 'w-7 h-7'
       : size === 'lg'
-      ? 'w-12 h-12 rounded-2xl'
+      ? 'w-12 h-12'
       : size === 'xl'
-      ? 'w-16 h-16 rounded-3xl'
-      : 'w-9 h-9 rounded-xl';
+      ? 'w-16 h-16'
+      : 'w-9 h-9';
 
   return (
-    <div className={`inline-flex items-center justify-center select-none overflow-hidden ${className}`}>
+    <div className={`inline-flex items-center justify-center select-none ${className}`}>
       <img
         src="/mibid_app_icon.png"
         alt="MIBID Icon"
-        className={`${sizeClass} object-contain shadow-sm`}
+        className={`${sizeClass} object-contain`}
       />
     </div>
   );

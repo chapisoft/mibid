@@ -8,7 +8,7 @@ import { Currency, Department, Incoterm, TaskPriority, TenderStage, UserRole } f
 export const APP_CONFIG = {
   APP_NAME: 'MIBID',
   APP_FULL_NAME: 'Nền Tảng Không Gian Cộng Tác Số Quản Lý Gói Thầu & Hồ Sơ Thầu Xuất Nhập Khẩu',
-  API_BASE_URL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api/v1',
+  API_BASE_URL: process.env.NEXT_PUBLIC_API_URL || 'https://api-bid.microtec.vn/api/v1',
   DEFAULT_TIMEOUT_MS: 15000,
   MAGIC_LINK_TTL_HOURS: 72,
   EXPIRING_SOON_THRESHOLD_DAYS: 30,

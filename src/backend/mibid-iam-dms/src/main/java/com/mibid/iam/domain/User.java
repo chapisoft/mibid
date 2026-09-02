@@ -39,4 +39,16 @@ public class User extends BaseEntity {
 
     @Column(name = "status", nullable = false, length = 32)
     private String status; // ACTIVE, LOCKED, INACTIVE
+
+    @Column(name = "department", length = 100)
+    private String department;
+
+    @Column(name = "position", length = 100)
+    private String position;
+
+    @Column(name = "last_login_tenant_id")
+    private java.util.UUID lastLoginTenantId;
+
+    @Column(name = "last_login_at")
+    private java.time.LocalDateTime lastLoginAt;
 }

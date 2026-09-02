@@ -119,17 +119,17 @@ export function LanguageSwitcher() {
       <button
         type="button"
         onClick={() => setIsOpen(!isOpen)}
-        className={`inline-flex items-center gap-2 px-3.5 py-2 text-[13.5px] sm:text-sm font-semibold rounded-full border transition-all duration-150 shadow-sm ${
+        className={`inline-flex items-center justify-center gap-1 h-9 px-2.5 rounded-full border transition-all duration-150 shadow-sm cursor-pointer ${
           isOpen
             ? 'border-blue-600 bg-blue-50 dark:bg-blue-950/70 text-blue-600 dark:text-blue-400 font-bold shadow-blue-500/10'
             : 'border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800'
         }`}
         aria-label="Chọn ngôn ngữ"
+        title={currentLang.label}
       >
-        <span className="text-base leading-none">{currentLang.flag}</span>
-        <span>{currentLang.label}</span>
+        <span className="text-lg leading-none">{currentLang.flag}</span>
         <svg
-          className={`w-4 h-4 transition-transform duration-200 ${
+          className={`w-3.5 h-3.5 transition-transform duration-200 ${
             isOpen ? 'rotate-180 text-blue-600' : 'text-slate-400'
           }`}
           fill="none"

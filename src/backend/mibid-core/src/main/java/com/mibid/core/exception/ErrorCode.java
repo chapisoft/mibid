@@ -41,6 +41,9 @@ public enum ErrorCode {
     CAPTCHA_REQUIRED(400, "error.portal.captchaRequired"),
     PIN_REQUIRED(400, "error.portal.pinRequired"),
 
+    // ---- SaaS & Quota ----
+    TENANT_USER_QUOTA_EXCEEDED(400, "error.tenant.userQuotaExceeded"),
+
     // ---- Server Error ----
     INTERNAL_SERVER_ERROR(500, "error.internal");
 

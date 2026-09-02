@@ -18,8 +18,8 @@ public class TenantController {
     private final TenantService tenantService;
 
     @GetMapping
-    public ResponseEntity<ResultResponse<List<Tenant>>> listTenants() {
-        return ResponseEntity.ok(ResultResponse.success(tenantService.getAllTenants()));
+    public ResponseEntity<ResultResponse<List<TenantService.TenantSummaryDto>>> listTenants() {
+        return ResponseEntity.ok(ResultResponse.success(tenantService.getAllTenantsSummary()));
     }
 
     @GetMapping("/{id}")
@@ -35,6 +35,28 @@ public class TenantController {
     @PutMapping("/{id}")
     public ResponseEntity<ResultResponse<Tenant>> updateTenant(@PathVariable UUID id, @RequestBody Tenant tenant) {
         return ResponseEntity.ok(ResultResponse.success(tenantService.updateTenant(id, tenant)));
+    }
+
+    @GetMapping("/{id}/members")
+    public ResponseEntity<ResultResponse<TenantService.TenantMembersDto>> getTenantMembers(@PathVariable UUID id) {
+        return ResponseEntity.ok(ResultResponse.success(tenantService.getTenantMembers(id)));
+    }
+
+    @PostMapping("/{id}/members")
+    public ResponseEntity<ResultResponse<TenantService.TenantMemberItemDto>> addMember(
+            @PathVariable UUID id,
+            @RequestBody TenantService.AddTenantMemberRequest request
+    ) {
+        return ResponseEntity.ok(ResultResponse.success(tenantService.addMemberToTenant(id, request)));
+    }
+
+    @DeleteMapping("/{id}/members/{userId}")
+    public ResponseEntity<ResultResponse<Void>> removeMember(
+            @PathVariable UUID id,
+            @PathVariable UUID userId
+    ) {
+        tenantService.removeMemberFromTenant(id, userId);
+        return ResponseEntity.ok(ResultResponse.success(null));
     }
 
     @DeleteMapping("/{id}")

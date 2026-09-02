@@ -7,10 +7,34 @@ import { APP_CONFIG, STORAGE_KEYS } from '../shared/constants';
 
 class ApiClient {
   private get baseUrl(): string {
-    if (typeof process !== 'undefined' && process.env?.NEXT_PUBLIC_API_URL) {
-      return process.env.NEXT_PUBLIC_API_URL;
+    // 1. Phân giải trên trình duyệt (Browser Client-Side)
+    if (typeof window !== 'undefined') {
+      const hostname = window.location.hostname;
+      // Khi đang chạy trên domain máy chủ (microtec.vn hoặc production domain)
+      if (hostname.includes('microtec.vn')) {
+        const proto = window.location.protocol === 'https:' ? 'https:' : 'http:';
+        return `${proto}//api-bid.microtec.vn/api/v1`;
+      }
+      // Khi đang chạy cục bộ (localhost hoặc IP cục bộ)
+      if (hostname === 'localhost' || hostname === '127.0.0.1') {
+        return process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api/v1';
+      }
     }
-    return APP_CONFIG?.API_BASE_URL || 'http://localhost:8080/api/v1';
+
+    // 2. Phân giải trên Server / SSR runtime
+    if (typeof process !== 'undefined') {
+      if (process.env?.NEXT_PUBLIC_API_URL && !process.env.NEXT_PUBLIC_API_URL.includes('localhost')) {
+        return process.env.NEXT_PUBLIC_API_URL;
+      }
+      if (process.env?.BACKEND_API_URL) {
+        return `${process.env.BACKEND_API_URL}/api/v1`;
+      }
+      if (process.env?.NEXT_PUBLIC_API_URL) {
+        return process.env.NEXT_PUBLIC_API_URL;
+      }
+    }
+
+    return APP_CONFIG?.API_BASE_URL || 'https://api-bid.microtec.vn/api/v1';
   }
 
   private getHeaders(): HeadersInit {

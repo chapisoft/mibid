@@ -89,10 +89,12 @@ mibid/
 │   └── 22-user-guide.md                            # Tài liệu Hướng dẫn Sử dụng HDSD 5 phần
 ├── plan/                                           # Bảng điều phối và quản trị tiến độ
 │   ├── docs-plan.md                                # Kế hoạch Chuẩn hóa Hồ sơ Tài liệu 6 Cổng
-│   └── dev-plan.md                                 # Kế hoạch Phát triển Mã nguồn chi tiết (tham chiếu smart-otp)
+│   ├── dev-plan.md                                 # Kế hoạch Phát triển Mã nguồn chi tiết (tham chiếu smart-otp)
+│   └── deploy.md                                   # Kế hoạch Phân tích & Triển khai Hệ thống MIBID (HDCD_VH)
 ├── src/                                            # Mã nguồn ứng dụng
-│   ├── backend/                                    # Backend Java 17 / Spring Boot 3
-│   └── frontend/                                   # Frontend Next.js 14 / TypeScript
+│   ├── backend/                                    # Backend Java 21 / Spring Boot 3.3 (13 modules)
+│   └── frontend/                                   # Frontend Next.js 14 Hợp Nhất
+│       └── webapp/                                 # Ứng dụng WebApp duy nhất (Staff CMS & Vendor Portal)
 ├── tests/                                          # Không gian kiểm thử tự động & nghiệm thu
 │   ├── k6/k6_loadtest.js                           # Kịch bản đo kiểm tải cao 1.000 RPS
 │   └── uat/uat_test_cases.xlsx                     # Bộ kịch bản nghiệm thu người dùng

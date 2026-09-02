@@ -5,7 +5,7 @@ import { CmsScreen, UserRole } from '../../shared/types';
 import { useAuth } from '../../shared/auth/AuthContext';
 import { useTranslation } from '../../shared/i18n';
 import { MibidLogo } from '../../shared/ui/MibidLogo';
-import { Lock, User, Building2, ArrowLeft, ArrowRight, ShieldAlert, AlertTriangle } from 'lucide-react';
+import { Lock, User, ArrowLeft, ArrowRight, AlertTriangle, CheckCircle2, ShieldCheck, Sparkles } from 'lucide-react';
 import { CaptchaBox } from '../../shared/components/CaptchaBox';
 
 interface LoginPageProps {
@@ -15,9 +15,8 @@ interface LoginPageProps {
 export function LoginPage({ onNavigate }: LoginPageProps) {
   const { login } = useAuth();
   const { t } = useTranslation();
-  const [username, setUsername] = useState('admin.mibid');
+  const [username, setUsername] = useState('admin.eemc');
   const [password, setPassword] = useState('MibidSecure2026!');
-  const [tenant, setTenant] = useState('11111111-1111-1111-1111-111111111111');
   const [loading, setLoading] = useState(false);
 
   // Cơ chế phát hiện và kích hoạt CAPTCHA sau 2 lần đăng nhập sai
@@ -41,19 +40,28 @@ export function LoginPage({ onNavigate }: LoginPageProps) {
     return 'dashboard';
   };
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoginError('');
     setCaptchaError('');
 
+    if (!username.trim()) {
+      setLoginError('Vui lòng nhập tên đăng nhập hoặc email');
+      return;
+    }
+    if (!password) {
+      setLoginError('Vui lòng nhập mật khẩu');
+      return;
+    }
+
     // Bắt buộc xác thực CAPTCHA nếu đã nhập sai từ 2 lần trở lên
     if (isCaptchaRequired) {
       if (!captchaInput.trim()) {
-        setCaptchaError(t.auth.captchaRequired);
+        setCaptchaError(t.auth.captchaRequired || 'Vui lòng nhập mã kiểm tra CAPTCHA');
         return;
       }
       if (captchaInput.trim().toUpperCase() !== currentCaptchaCode.toUpperCase()) {
-        setCaptchaError(t.auth.captchaIncorrect);
+        setCaptchaError(t.auth.captchaIncorrect || 'Mã kiểm tra CAPTCHA không chính xác');
         setCaptchaInput('');
         setCaptchaKey((prev) => prev + 1);
         return;
@@ -62,44 +70,35 @@ export function LoginPage({ onNavigate }: LoginPageProps) {
 
     setLoading(true);
 
-    setTimeout(() => {
-      // Mật khẩu chuẩn của hệ thống demo: MibidSecure2026! hoặc Admin@123
-      const isValidPassword = password === 'MibidSecure2026!' || password === 'Admin@123' || password === '123456';
-
-      if (!isValidPassword) {
+    try {
+      const result = await login({ username, password });
+      if (result.success) {
+        setFailedAttempts(0);
+        setCaptchaInput('');
+        setLoginError('');
+        setCaptchaError('');
+        onNavigate(getTargetScreen());
+      } else {
         const nextFailed = failedAttempts + 1;
         setFailedAttempts(nextFailed);
         setCaptchaInput('');
         setCaptchaKey((prev) => prev + 1);
-        setLoginError(t.auth.loginFailedAttempts.replace('{attempts}', nextFailed.toString()));
-        setLoading(false);
-        return;
+        setLoginError(result.error || 'Tên đăng nhập hoặc mật khẩu không chính xác');
       }
-
-      // Đăng nhập thành công, reset toàn bộ số lần thử và CAPTCHA
-      setFailedAttempts(0);
-      setCaptchaInput('');
-      setLoginError('');
-      setCaptchaError('');
-      login({ username });
+    } catch (err: any) {
+      const nextFailed = failedAttempts + 1;
+      setFailedAttempts(nextFailed);
+      setLoginError(err?.message || 'Không thể kết nối đến máy chủ xác thực');
+    } finally {
       setLoading(false);
-      onNavigate(getTargetScreen());
-    }, 300);
+    }
   };
 
-  const handleQuickLogin = (user: string, role: UserRole) => {
-    setUsername(user);
-    setPassword('MibidSecure2026!');
-    setFailedAttempts(0);
-    setCaptchaInput('');
+  const handleQuickFill = (accUser: string, accPass: string = 'MibidSecure2026!') => {
+    setUsername(accUser);
+    setPassword(accPass);
     setLoginError('');
     setCaptchaError('');
-    setLoading(true);
-    setTimeout(() => {
-      login({ username: user, role });
-      setLoading(false);
-      onNavigate(getTargetScreen());
-    }, 200);
   };
 
   return (
@@ -120,7 +119,9 @@ export function LoginPage({ onNavigate }: LoginPageProps) {
           <div className="flex flex-col items-center text-center space-y-2">
             <MibidLogo size="lg" />
             <h2 className="text-lg font-bold text-slate-900 dark:text-white pt-2">{t.auth.loginTitle}</h2>
-            <p className="text-xs text-slate-400">{t.auth.loginSubtitle}</p>
+            <p className="text-xs text-slate-400">
+              Hệ thống tự động nhận diện tổ chức doanh nghiệp được phân quyền
+            </p>
           </div>
 
           <form onSubmit={handleLogin} className="space-y-4">
@@ -132,124 +133,120 @@ export function LoginPage({ onNavigate }: LoginPageProps) {
                   <p className="font-semibold">{loginError}</p>
                   {isCaptchaRequired && (
                     <p className="text-[11px] text-rose-600/90 dark:text-rose-400 font-medium">
-                      {t.auth.captchaTriggerNotice}
+                      {t.auth.captchaTriggerNotice || 'Nhập sai nhiều lần. Vui lòng xác thực CAPTCHA bên dưới.'}
                     </p>
                   )}
                 </div>
               </div>
             )}
 
-            {/* Tenant Selection */}
-            <div className="space-y-1.5">
-              <label className="text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
-                <Building2 className="w-3.5 h-3.5 text-blue-600" />
-                <span>{t.auth.tenantLabel}</span>
-              </label>
-              <select
-                value={tenant}
-                onChange={(e) => setTenant(e.target.value)}
-                className="w-full px-3.5 py-2.5 text-xs sm:text-sm rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-slate-200 shadow-2xs hover:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:outline-none font-semibold"
-              >
-                <option value="11111111-1111-1111-1111-111111111111">Tổng Công Ty Thiết Bị Điện Đông Anh (EEMC)</option>
-                <option value="22222222-2222-2222-2222-222222222222">Công Ty CP Chế Tạo Biến Thế Hà Nội (HBT)</option>
-              </select>
-            </div>
-
-            {/* Username */}
+            {/* Username / Email */}
             <div className="space-y-1.5">
               <label className="text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
                 <User className="w-3.5 h-3.5 text-blue-600" />
-                <span>{t.auth.usernameLabel}</span>
+                <span>Tên đăng nhập hoặc Email</span>
               </label>
               <input
                 type="text"
-                required
                 value={username}
-                onChange={(e) => {
-                  setUsername(e.target.value);
-                  setLoginError('');
-                }}
-                className="w-full px-3.5 py-2.5 text-xs rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-slate-200 focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                onChange={(e) => setUsername(e.target.value)}
+                placeholder="Ví dụ: admin.eemc hoặc admin@eemc.mibid.vn"
+                className="w-full px-3.5 py-2.5 text-xs sm:text-sm rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-slate-200 shadow-2xs hover:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:outline-none font-semibold transition-all"
+                disabled={loading}
               />
             </div>
 
             {/* Password */}
             <div className="space-y-1.5">
-              <label className="text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
-                <Lock className="w-3.5 h-3.5 text-blue-600" />
-                <span>{t.auth.passwordLabel}</span>
-              </label>
+              <div className="flex items-center justify-between">
+                <label className="text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+                  <Lock className="w-3.5 h-3.5 text-blue-600" />
+                  <span>{t.auth.passwordLabel}</span>
+                </label>
+              </div>
               <input
                 type="password"
-                required
                 value={password}
-                onChange={(e) => {
-                  setPassword(e.target.value);
-                  setLoginError('');
-                }}
-                className="w-full px-3.5 py-2.5 text-xs rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-slate-200 focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="Mật khẩu"
+                className="w-full px-3.5 py-2.5 text-xs sm:text-sm rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-slate-200 shadow-2xs hover:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:outline-none font-semibold transition-all"
+                disabled={loading}
               />
             </div>
 
-            {/* CAPTCHA Xác thực khi nhập sai >= 2 lần */}
+            {/* Khối CAPTCHA xuất hiện khi người dùng đăng nhập thất bại từ 2 lần trở lên */}
             {isCaptchaRequired && (
-              <CaptchaBox
-                key={captchaKey}
-                value={captchaInput}
-                onChange={(val) => {
-                  setCaptchaInput(val);
-                  setCaptchaError('');
-                }}
-                onCodeGenerated={(code) => setCurrentCaptchaCode(code)}
-                error={captchaError}
-                label={t.auth.captchaLabel}
-                placeholder={t.auth.captchaPlaceholder}
-                refreshLabel={t.auth.captchaRefresh}
-              />
+              <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800 space-y-2 animate-in fade-in slide-in-from-top-2">
+                <CaptchaBox
+                  key={captchaKey}
+                  value={captchaInput}
+                  onChange={(val) => {
+                    setCaptchaInput(val);
+                    setCaptchaError('');
+                  }}
+                  onCodeGenerated={(code) => setCurrentCaptchaCode(code)}
+                  error={captchaError}
+                  label={t.auth.captchaLabel || 'Xác thực bảo mật (CAPTCHA)'}
+                  placeholder={t.auth.captchaPlaceholder || 'Nhập mã'}
+                />
+              </div>
             )}
 
             {/* Submit Button */}
             <button
               type="submit"
               disabled={loading}
-              className="w-full py-3 rounded-xl bg-blue-600 hover:bg-blue-700 active:scale-[0.99] text-white font-bold text-xs sm:text-sm shadow-lg shadow-blue-500/25 transition-all flex items-center justify-center gap-2"
+              className="w-full py-3 px-4 rounded-2xl font-bold text-xs sm:text-sm text-white bg-blue-600 hover:bg-blue-700 active:scale-[0.99] transition-all shadow-md shadow-blue-500/20 flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
             >
-              <span>{loading ? t.auth.loggingIn : t.auth.loginBtn}</span>
-              <ArrowRight className="w-4 h-4" />
+              {loading ? (
+                <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+              ) : (
+                <>
+                  <span>{t.auth.loginBtn}</span>
+                  <ArrowRight className="w-4 h-4" />
+                </>
+              )}
             </button>
           </form>
 
-          {/* Quick Login Demo Accounts */}
-          <div className="pt-4 border-t border-slate-100 dark:border-slate-800 space-y-2.5">
-            <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider text-center">
-              {t.auth.demoAccountsTitle}
+          {/* Quick Login Demos */}
+          <div className="pt-2 border-t border-slate-100 dark:border-slate-800/80 space-y-2">
+            <p className="text-[11px] font-bold text-slate-400 flex items-center gap-1">
+              <Sparkles className="w-3 h-3 text-amber-500" />
+              <span>Tài khoản thử nghiệm nhanh (Mật khẩu: MibidSecure2026!)</span>
             </p>
-            <div className="grid grid-cols-3 gap-2">
+            <div className="grid grid-cols-2 gap-2">
               <button
                 type="button"
-                onClick={() => handleQuickLogin('admin.mibid', UserRole.BID_MANAGER)}
-                className="p-2 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 hover:bg-blue-50 dark:hover:bg-blue-950/50 text-center transition-colors"
+                onClick={() => handleQuickFill('admin.eemc')}
+                className="px-2.5 py-1.5 rounded-xl border border-slate-200 dark:border-slate-800 text-[11px] font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 text-left transition-colors flex flex-col cursor-pointer"
               >
-                <span className="block text-[11px] font-bold text-slate-800 dark:text-slate-200">admin.mibid</span>
-                <span className="block text-[9px] text-blue-600 dark:text-blue-400">Bid Manager</span>
+                <span className="font-bold text-blue-600 dark:text-blue-400">admin.eemc</span>
+                <span className="text-[10px] text-slate-400">EEMC (Enterprise)</span>
               </button>
-
               <button
                 type="button"
-                onClick={() => handleQuickLogin('trong.td', UserRole.TECHNICAL_LEAD)}
-                className="p-2 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 hover:bg-blue-50 dark:hover:bg-blue-950/50 text-center transition-colors"
+                onClick={() => handleQuickFill('sourcing.eemc')}
+                className="px-2.5 py-1.5 rounded-xl border border-slate-200 dark:border-slate-800 text-[11px] font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 text-left transition-colors flex flex-col cursor-pointer"
               >
-                <span className="block text-[11px] font-bold text-slate-800 dark:text-slate-200">trong.td</span>
-                <span className="block text-[9px] text-emerald-600 dark:text-emerald-400">Tech Lead</span>
+                <span className="font-bold text-emerald-600 dark:text-emerald-400">sourcing.eemc</span>
+                <span className="text-[10px] text-slate-400">Sourcing Specialist</span>
               </button>
-
               <button
                 type="button"
-                onClick={() => handleQuickLogin('thuy.ltt', UserRole.FINANCE_LEAD)}
-                className="p-2 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 hover:bg-blue-50 dark:hover:bg-blue-950/50 text-center transition-colors"
+                onClick={() => handleQuickFill('admin.pvn')}
+                className="px-2.5 py-1.5 rounded-xl border border-slate-200 dark:border-slate-800 text-[11px] font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 text-left transition-colors flex flex-col cursor-pointer"
               >
-                <span className="block text-[11px] font-bold text-slate-800 dark:text-slate-200">thuy.ltt</span>
-                <span className="block text-[9px] text-purple-600 dark:text-purple-400">Finance Lead</span>
+                <span className="font-bold text-purple-600 dark:text-purple-400">admin.pvn</span>
+                <span className="text-[10px] text-slate-400">PVN (Starter: 2 users)</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => handleQuickFill('superadmin')}
+                className="px-2.5 py-1.5 rounded-xl border border-slate-200 dark:border-slate-800 text-[11px] font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 text-left transition-colors flex flex-col cursor-pointer"
+              >
+                <span className="font-bold text-amber-600 dark:text-amber-400">superadmin</span>
+                <span className="text-[10px] text-slate-400">Đa Doanh Nghiệp</span>
               </button>
             </div>
           </div>

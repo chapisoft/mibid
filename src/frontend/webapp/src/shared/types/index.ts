@@ -39,6 +39,7 @@ export enum RfqVendorStatus {
 }
 
 export enum UserRole {
+  ADMIN = 'ADMIN',
   TENANT_ADMIN = 'TENANT_ADMIN',
   BID_MANAGER = 'BID_MANAGER',
   SOURCING_SPECIALIST = 'SOURCING_SPECIALIST',
@@ -70,6 +71,26 @@ export type CmsScreen =
   | 'menus'
   | 'subscriptions'
   | 'integration';
+
+export enum SubscriptionPlanCode {
+  STARTER = 'STARTER',
+  PROFESSIONAL = 'PROFESSIONAL',
+  ENTERPRISE = 'ENTERPRISE',
+}
+
+export interface SubscriptionPlan {
+  id: string;
+  code: string;
+  name: string;
+  description: string;
+  monthlyPrice: number;
+  yearlyPrice: number;
+  maxUsers: number;
+  maxMachines?: number;
+  maxStorageGb: number;
+  allowedModules?: string;
+  isActive: boolean;
+}
 
 export enum PaymentTerm {
   LC_AT_SIGHT = 'LC_AT_SIGHT',
@@ -306,6 +327,14 @@ export enum GatekeeperStatus {
   PENDING = 'PENDING',
 }
 
+export interface TenantInfo {
+  id: string;
+  code: string;
+  name: string;
+  role?: string;
+  isDefault?: boolean;
+}
+
 export interface UserSession {
   id: string;
   username: string;
@@ -315,6 +344,9 @@ export interface UserSession {
   tenantId: string;
   tenantName: string;
   avatarUrl?: string;
+  currentTenant?: TenantInfo;
+  authorizedTenants?: TenantInfo[];
+  token?: string;
 }
 
 export enum TenderType {

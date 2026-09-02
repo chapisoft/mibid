@@ -184,7 +184,7 @@ export function WorkflowListPage({ onSelectWorkflow }: WorkflowListPageProps) {
   }, 0);
 
   return (
-    <div className="space-y-6 max-w-7xl mx-auto pb-12">
+    <div className="space-y-6 w-full pb-12">
       {/* Top Navigation & Tab Switcher */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-200 dark:border-slate-800 pb-5">
         <div className="flex items-center gap-2 flex-wrap">

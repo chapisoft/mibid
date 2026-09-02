@@ -15,7 +15,7 @@ flowchart LR
     %% CÁC KHỐI GIAI ĐOẠN
     MOD1["1. HẠ TẦNG CSDL VÀ THƯ VIỆN LÕI (100%)"]:::cLevel1
     MOD2["2. BACKEND SPRING BOOT (5 DỊCH VỤ) (100%)"]:::cLevel1
-    MOD3["3. FRONTEND (WEB CMS & VENDOR PORTAL) (100%)"]:::cLevel1
+    MOD3["3. FRONTEND WEBAPP HỢP NHẤT (100%)"]:::cLevel1
     MOD4["4. ĐO KIỂM TẢI CAO & UAT NGHIỆM THU (100%)"]:::cLevel1
 
     T1["1.1. CSDL PostgreSQL 38 bảng & RLS (100%)"]:::cLevel2
@@ -24,8 +24,8 @@ flowchart LR
     T3["2.1. Phân hệ 1 & 2: IAM DMS & Dynamic Workflow Gatekeeper (100%)"]:::cLevel2
     T4["2.2. Phân hệ 3, 4 & 5: Sourcing, Task Dispatcher & Logistics (100%)"]:::cLevel2
 
-    T5["3.1. Web CMS Quản Trị Dự Án (Next.js 14 FSD - Desktop) (100%)"]:::cLevel2
-    T6["3.2. Cổng Báo Giá Không Chạm Magic Link (Mobile Web) (100%)"]:::cLevel2
+    T5["3.1. Không Gian Staff CMS Quản Trị Dự Án (Next.js 14 FSD) (100%)"]:::cLevel2
+    T6["3.2. Cổng Báo Giá Nhà Cung Cấp Magic Link (Next.js 14 FSD) (100%)"]:::cLevel2
 
     T7["4.1. Đo kiểm Tải k6 1.000 RPS & 4 Bài Bẫy Concurrency (100%)"]:::cLevel2
     T8["4.2. Nghiệm thu UAT 6 Sheet & Đóng gói Upcode HDUP (100%)"]:::cLevel2
@@ -51,7 +51,7 @@ flowchart LR
   * *Cơ sở dữ liệu:* Hoàn thành 100% kịch bản DDL 38 bảng PostgreSQL 15+ [database/001_init_schema.sql](file:///Users/micro/Source/erp/mibid/database/001_init_schema.sql) và [database/002_seed_data.sql](file:///Users/micro/Source/erp/mibid/database/002_seed_data.sql) tích hợp Row-Level Security (RLS).
   * *Hạ tầng triển khai:* Hoàn thành 100% gói cấu hình Docker Compose phân tán [deploy/docker-compose.yml](file:///Users/micro/Source/erp/mibid/deploy/docker-compose.yml), Nginx Reverse Proxy SSL TLS 1.3 [deploy/nginx/nginx.conf](file:///Users/micro/Source/erp/mibid/deploy/nginx/nginx.conf) và backup scripts.
   * *Backend Java 21 / Spring Boot 3.3:* Hoàn thành 100% bộ 6 thư viện lõi `mibid-libs` và 5 microservices nghiệp vụ (`mibid-iam-dms`, `mibid-workflow-engine`, `mibid-sourcing-portal`, `mibid-bidding-task`, `mibid-logistics-analytics`), server aggregator `mibid-server`. Đạt **BUILD SUCCESS 100%** qua lệnh `mvn clean test` cho toàn bộ 13 module.
-  * *Frontend Next.js 14:* Hoàn thành 100% cấu trúc FSD cho cả 2 ứng dụng (`cms` và `vendor`), 5 từ điển đa ngôn ngữ (`vi.json`, `en.json`, `zh.json`, `ja.json`, `ko.json`), DataTable chuẩn, Bảng Kanban kéo thả `@hello-pangea/dnd`, Modal Gatekeeper, Kho hồ sơ DMS và Ma trận so sánh giá.
+  * *Frontend Next.js 14:* Hoàn thành 100% cấu trúc FSD cho ứng dụng WebApp hợp nhất duy nhất (`src/frontend/webapp` tích hợp trọn vẹn cả Staff CMS và Vendor Portal qua Dual Portal Selector), 5 từ điển đa ngôn ngữ (`vi.json`, `en.json`, `zh.json`, `ja.json`, `ko.json`), DataTable chuẩn, Bảng Kanban kéo thả `@hello-pangea/dnd`, Modal Gatekeeper, Kho hồ sơ DMS và Ma trận so sánh giá.
 * **Tầng 2 — Tích hợp dịch vụ đối tác thực tế (Trọng số 20%):** Hiện đạt **20.0% / 20% (100%)** (Đã cấu hình Adapter kết nối SMTP Gateway, SMS Brandname, MinIO/S3 Storage Pre-signed URL và cổng Magic Link JWT).
 * **Tầng 3 — Đo kiểm tải cao & Đóng gói vận hành (Trọng số 20%):** Hiện đạt **20.0% / 20% (100%)** (Bộ kịch bản k6 1.000 RPS và 4 bài bẫy Concurrency [tests/k6/k6_loadtest.js](file:///Users/micro/Source/erp/mibid/tests/k6/k6_loadtest.js), bộ UAT 6 sheet [tests/uat/uat_test_cases.xlsx](file:///Users/micro/Source/erp/mibid/tests/uat/uat_test_cases.xlsx), Sổ tay Upcode [docs/20-upcode-guide.md](file:///Users/micro/Source/erp/mibid/docs/20-upcode-guide.md) & Vận hành [docs/21-operations-guide.md](file:///Users/micro/Source/erp/mibid/docs/21-operations-guide.md)).
 * **TỔNG TIẾN ĐỘ PHÁT TRIỂN MÃ NGUỒN HIỆN TẠI:** **100.0%** (Hoàn thành trọn vẹn toàn bộ 4 Sprints phát triển).
@@ -79,7 +79,7 @@ flowchart LR
         direction TB
         MB_LIBS["mibid-libs - 6 Thư viện Chuẩn hóa<br/>• mibid-core: Multi-tenant RLS, BaseEntity<br/>• mibid-security, mibid-redis, mibid-s3, mibid-excel"]
         MB_BE["5 Microservices Nghiệp Vụ Mibid<br/>• iam-dms, workflow-engine, sourcing-portal<br/>• bidding-task, logistics-analytics"]
-        MB_FE["2 Ứng Dụng Frontend Next.js 14 FSD<br/>• cms: Kanban, Matrix, Task Board<br/>• vendor: Magic Link Mobile Portal"]
+        MB_FE["1 Ứng Dụng Frontend WebApp Hợp Nhất<br/>• webapp: Dual Portal Selector<br/>• Staff CMS & Vendor Portal tích hợp"]
         MB_LIBS --> MB_BE
         MB_BE --> MB_FE
     end
@@ -112,11 +112,10 @@ flowchart LR
 | **Phân hệ 5: Logistics & BI** | `smart-otp` (ShedLock & BI) | 10.0 MD | **50%** | **5.0 MD** | 5.0 MD | Kế thừa ShedLock Cron, Notification client; viết mới Milestone Tracker & 8:00 AM Cron. |
 | **TỔNG NHÓM 2** | -- | **66.0 MD** | **45.8%** | **30.2 MD** | **35.8 MD** | **Tiết kiệm 30.2 / 66.0 Man-Days.** |
 
-#### Nhóm 3: 2 Ứng Dụng Frontend Next.js 14 (`frontend/`)
-| Ứng Dụng Frontend | Ứng Dụng Kế Thừa `smart-otp` | Nỗ lực làm mới từ đầu | Tỷ lệ Tái sử dụng | Nỗ lực Tiết kiệm | Nỗ lực Thực tế Cần làm | Hạng mục Kế thừa & Phát triển Mới |
+#### Nhóm 3: Ứng Dụng Frontend WebApp Hợp Nhất Next.js 14 (`src/frontend/webapp/`)
+| Ứng Dụng Frontend | Nguồn Kế Thừa `smart-otp` | Nỗ lực làm mới từ đầu | Tỷ lệ Tái sử dụng | Nỗ lực Tiết kiệm | Nỗ lực Thực tế Cần làm | Hạng mục Kế thừa & Phát triển Mới |
 | :--- | :--- | :---: | :---: | :---: | :---: | :--- |
-| **Web CMS Desktop** (`cms`) | `cms-admin` | 28.0 MD | **60%** | **16.8 MD** | 11.2 MD | Kế thừa Base Layout, ThemeToggle, i18n 5 thứ tiếng, DataTable UI, Auth Context; viết mới Bảng Kanban `@hello-pangea/dnd`, Ma trận giá & Task Drawer. |
-| **Vendor Mobile Portal** (`vendor`) | `sandbox-portal` | 14.0 MD | **65%** | **9.1 MD** | 4.9 MD | Kế thừa Layout Mobile-first, Modal PIN 4 số, Public Route Guard; viết mới Form nộp giá từng dòng hàng & Upload catalog. |
+| **Frontend WebApp Hợp Nhất** (`webapp`) | `cms-admin` & `sandbox-portal` | 42.0 MD | **61.7%** | **25.9 MD** | 16.1 MD | Hợp nhất 2 không gian Staff CMS & Vendor Portal trong 1 ứng dụng Next.js 14 FSD duy nhất; kế thừa Base Layout, ThemeToggle, i18n 5 thứ tiếng, DataTable UI, Modal PIN; viết mới Kanban 60 FPS, Ma trận giá & Task Drawer. |
 | **TỔNG NHÓM 3** | -- | **42.0 MD** | **61.7%** | **25.9 MD** | **16.1 MD** | **Tiết kiệm 25.9 / 42.0 Man-Days.** |
 
 #### Nhóm 4: Hạ Tầng DevOps, CI/CD & Kiểm Thử Tải Cao
@@ -134,7 +133,7 @@ flowchart LR
 | :--- | :---: | :---: | :---: | :---: | :---: |
 | **1. Thư viện Lõi Dùng Chung (`mibid-libs`)** | 45.0 | **75.3%** | 33.9 | 11.1 | 34.2% |
 | **2. 5 Microservices Nghiệp Vụ Backend** | 66.0 | **45.8%** | 30.2 | 35.8 | 30.5% |
-| **3. 2 Ứng Dụng Frontend (Web CMS & Portal)** | 42.0 | **61.7%** | 25.9 | 16.1 | 26.2% |
+| **3. Ứng Dụng Frontend WebApp Hợp Nhất (`webapp`)** | 42.0 | **61.7%** | 25.9 | 16.1 | 26.2% |
 | **4. Hạ Tầng DevOps & Kiểm Thử Tải Cao** | 15.0 | **60.0%** | 9.0 | 6.0 | 9.1% |
 | **TỔNG CỘNG TOÀN DỰ ÁN MIBID** | **168.0 MD** | **58.9%** | **99.0 MD** | **69.0 MD** | **100.0%** |
 
@@ -169,7 +168,7 @@ flowchart LR
     subgraph S_STEP2 ["BƯỚC 2: KHUNG 5 DỊCH VỤ & FRONTEND"]
         direction TB
         P3["2.1. Lắp ráp 5 Microservices Hexagonal<br/>• Domain, Ports (In/Out), Adapters (Web/DB)<br/>• Ánh xạ CSDL 38 bảng PostgreSQL RLS"]
-        P4["2.2. Tái sử dụng Layout CMS & Portal<br/>• Theme Sáng mặc định + Light/Dark Switcher<br/>• Khai báo 5 từ điển i18n (Việt, Anh, Trung, Nhật, Hàn)"]
+        P4["2.2. Tái cấu trúc WebApp Hợp Nhất<br/>• Theme Sáng mặc định + Light/Dark Switcher<br/>• Khai báo 5 từ điển i18n (Việt, Anh, Trung, Nhật, Hàn)"]
         P3 --> P4
     end
 
@@ -224,12 +223,12 @@ flowchart LR
 
 ---
 
-### SPRINT 1 (TUẦN 1): DI CHUYỂN BỘ THƯ VIỆN LÕI MIBID-LIBS & KHỞI TẠO WEB CMS / PORTAL
+### SPRINT 1 (TUẦN 1): DI CHUYỂN BỘ THƯ VIỆN LÕI MIBID-LIBS & KHỞI TẠO WEBAPP HỢP NHẤT
 * **Thời gian thực hiện:** Tuần 1 (5 Ngày làm việc)
-* **Mục tiêu:** Di chuyển, refactor và kiểm thử toàn diện bộ 6 thư viện `mibid-libs` từ `smart-otp`, tích hợp CSDL 38 bảng PostgreSQL RLS và dựng khung giao diện Next.js 14 FSD cho Web CMS và Vendor Portal.
+* **Mục tiêu:** Di chuyển, refactor và kiểm thử toàn diện bộ 6 thư viện `mibid-libs` từ `smart-otp`, tích hợp CSDL 38 bảng PostgreSQL RLS và dựng khung giao diện Next.js 14 FSD cho ứng dụng WebApp hợp nhất (tích hợp Staff CMS và Vendor Portal).
 * **Tiêu chuẩn nghiệm thu (DoD):**
   * `mvn clean install` thành công 100% trên toàn bộ module `backend/libs/`.
-  * Khởi tạo Web CMS chạy cổng 3000, có ThemeToggle (Light/Dark Mode) và Dropdown chọn 5 ngôn ngữ.
+  * Khởi tạo WebApp chạy cổng 3000, có ThemeToggle (Light/Dark Mode) và Dropdown chọn 5 ngôn ngữ.
 
 | Mã Task | Phân hệ / Khối | Tên Nhiệm Vụ Kỹ Thuật | Đặc Tả Kỹ Thuật & Tệp Tin Kế Thừa | Trọng số | Trạng thái |
 | :---: | :--- | :--- | :--- | :---: | :---: |
@@ -242,7 +241,7 @@ flowchart LR
 | `TASK-S1-07` | Thư viện Lõi | Refactor `mibid-s3` từ `ims-file` | MinIO Client SDK, Pre-signed URL (TTL 15m), Streaming Upload/Download, File Validator | 2.0% | **DONE (100%)** |
 | `TASK-S1-08` | Thư viện Lõi | Refactor `mibid-outbox` từ `ims-kafka`| Transactional Outbox Pattern Engine, `OutboxEvent` Entity, ShedLock Polling Publisher | 2.0% | **DONE (100%)** |
 | `TASK-S1-09` | Thư viện Lõi | Refactor `mibid-excel` từ `ims-excel`| Apache POI Engine sinh RFQ template, Export ma trận báo giá, Parse UAT Test Cases | 2.0% | **DONE (100%)** |
-| `TASK-S1-10` | Frontend CMS | Khởi tạo Web CMS & Vendor Portal | Tái sử dụng Layout từ `cms-admin` & `sandbox-portal`, cấu hình 5 từ điển i18n & ThemeToggle | 3.0% | **DONE (100%)** |
+| `TASK-S1-10` | Frontend WebApp | Khởi tạo WebApp Hợp Nhất | Tái sử dụng Layout từ `cms-admin` & `sandbox-portal`, cấu hình 5 từ điển i18n & ThemeToggle | 3.0% | **DONE (100%)** |
 
 ---
 
@@ -261,8 +260,8 @@ flowchart LR
 | `TASK-S2-03` | Phân hệ 1 Backend | F-1.3 & F-1.4: Kho Tài liệu Số DMS | `DocumentController`, `DmsService`, `DocApprovalService`, Bảng `documents`, `document_approvals` | 3.0% | **DONE (100%)** |
 | `TASK-S2-04` | Phân hệ 2 Backend | F-2.1 & F-2.2: Dynamic Workflow DAG | `WorkflowController`, `WorkflowService`, `ProjectTailoringService`, Bảng `workflows`, `workflow_transitions` | 3.5% | **DONE (100%)** |
 | `TASK-S2-05` | Phân hệ 2 Backend | F-2.3 & F-2.4: 4 Lớp Gatekeeper & Lock | `GatekeeperInterceptor`, Đánh giá 4 lớp: Doc Gate, Checklist, Financial, Approval & Redisson Lock | 3.5% | **DONE (100%)** |
-| `TASK-S2-06` | Frontend CMS | Màn hình Quản trị Tenant, User & DMS | Giao diện quản lý người dùng, cây thư mục chứng từ, xem trước PDF watermark (`cms`) | 3.0% | **DONE (100%)** |
-| `TASK-S2-07` | Frontend CMS | Bảng Kanban Kéo Thả 60 FPS & Modal | `@hello-pangea/dnd`, Bảng Kanban phân cột theo quy trình, Modal cảnh báo thiếu tài liệu & Bypass | 4.0% | **DONE (100%)** |
+| `TASK-S2-06` | Frontend WebApp | Màn hình Quản trị Tenant, User & DMS | Giao diện quản lý người dùng, cây thư mục chứng từ, xem trước PDF watermark (`webapp`) | 3.0% | **DONE (100%)** |
+| `TASK-S2-07` | Frontend WebApp | Bảng Kanban Kéo Thả 60 FPS & Modal | `@hello-pangea/dnd`, Bảng Kanban phân cột theo quy trình, Modal cảnh báo thiếu tài liệu & Bypass | 4.0% | **DONE (100%)** |
 
 ---
 
@@ -271,7 +270,7 @@ flowchart LR
 * **Mục tiêu:** Xây dựng hoàn chỉnh Phân hệ 3 (RFQ Line Items, Cổng Magic Link JWT di động, Comparison Matrix Engine đa ngoại tệ) và Phân hệ 4 & 5 (Dynamic Task Dispatcher, Đóng gói Thầu ZIP, Vận đơn Logistics BL, Scheduled Job 8:00 AM ShedLock & BI Analytics).
 * **Tiêu chuẩn nghiệm thu (DoD):**
   * Vendor mở liên kết Magic Link trên di động, nhập mã PIN 4 số chính xác, nộp báo giá từng dòng hàng thành công không cần tạo tài khoản.
-  * Web CMS tự động tính toán tổng chi phí Landed Cost và quy đổi tỷ giá USD/EUR/JPY/CNY về VND chuẩn xác.
+  * WebApp tự động tính toán tổng chi phí Landed Cost và quy đổi tỷ giá USD/EUR/JPY/CNY về VND chuẩn xác.
   * Hệ thống tự động sinh đúng danh mục task khi chuyển bước, xuất tệp ZIP đóng gói hồ sơ thầu, và Scheduled Job 8:00 AM gửi cảnh báo mốc ETD/ETA.
 
 | Mã Task | Phân hệ / Khối | Tên Nhiệm Vụ Kỹ Thuật | Đặc Tả Kỹ Thuật Chi Tiết & Tệp Tin Bàn Giao | Trọng số | Trạng thái |
@@ -281,8 +280,8 @@ flowchart LR
 | `TASK-S3-03` | Phân hệ 4 Backend | F-4.1 & F-4.2: Dynamic Task Dispatcher | `TaskDispatcherEngine`, Sinh task tự động theo `condition_rule`, Ad-hoc tasks, Task Completion Gate | 3.0% | **DONE (100%)** |
 | `TASK-S3-04` | Phân hệ 4 Backend | F-4.3: Đóng gói Hồ sơ Thầu ZIP/PDF | `TenderAssemblyService`, Gộp file PDF đánh số trang liên tục, nén tệp ZIP bảo mật bảng `tender_packages` | 2.5% | **DONE (100%)** |
 | `TASK-S3-05` | Phân hệ 5 Backend | F-5.1..F-5.3: Logistics BL, Cron & BI | `ShipmentService`, `ShipmentMilestoneCronJob` (8:00 AM ShedLock), `BiAnalyticsService` (`services/logistics`) | 3.5% | **DONE (100%)** |
-| `TASK-S3-06` | Frontend Portal | Cổng Báo Giá Di Động Magic Link | Next.js 14 Mobile Web (`vendor`), Modal nhập PIN, Form nộp báo giá từng dòng hàng | 3.5% | **DONE (100%)** |
-| `TASK-S3-07` | Frontend CMS | Ma Trận So Sánh Giá & Task Board | Bảng Comparison Matrix đa chiều trên Web CMS, Task Board Drawer, Màn hình Logistics BL & BI Recharts | 4.0% | **DONE (100%)** |
+| `TASK-S3-06` | Frontend WebApp | Cổng Báo Giá Nhà Cung Cấp Magic Link | Next.js 14 WebApp (`/vendor`), Modal nhập PIN, Form nộp báo giá từng dòng hàng | 3.5% | **DONE (100%)** |
+| `TASK-S3-07` | Frontend WebApp | Ma Trận So Sánh Giá & Task Board | Bảng Comparison Matrix đa chiều trên WebApp, Task Board Drawer, Màn hình Logistics BL & BI Recharts | 4.0% | **DONE (100%)** |
 
 ---
 
@@ -309,8 +308,8 @@ flowchart LR
 | :--- | :---: | :--- | :---: | :--- |
 | **Backend Technical Lead** | 01 | Di chuyển `mibid-libs`, Multi-tenant RLS, `mibid-core`, `mibid-security` | 15.0% | `TASK-S1-04`, `TASK-S1-05`, `TASK-S2-04`, `TASK-S2-05` |
 | **Senior Backend Developers** | 02 | 5 Microservices (IAM/DMS, Workflow, Sourcing, Bidding Tasks, Logistics) | 35.0% | `TASK-S1-06..09`, `TASK-S2-01..03`, `TASK-S3-01..05` |
-| **Frontend Technical Lead** | 01 | Tái sử dụng Next.js 14 từ `smart-otp`, UI Design Tokens, Auth Context, FSD | 12.0% | `TASK-S1-10`, `TASK-S2-07`, `TASK-S3-06` |
-| **Senior Frontend Developers**| 02 | Màn hình Web CMS Desktop (Kanban, Matrix, Task Board) & Mobile Portal | 20.0% | `TASK-S2-06`, `TASK-S3-07` |
+| **Frontend Technical Lead** | 01 | Tái sử dụng Next.js 14 từ `smart-otp`, hợp nhất WebApp 1 cổng duy nhất, UI Design Tokens, Auth Context, FSD | 12.0% | `TASK-S1-10`, `TASK-S2-07`, `TASK-S3-06` |
+| **Senior Frontend Developers**| 02 | Màn hình WebApp (Staff CMS Workspace & Vendor Portal) | 20.0% | `TASK-S2-06`, `TASK-S3-07` |
 | **Database Administrator (DBA)**| 01 | DDL 38 Bảng PostgreSQL, RLS Policies, Indexing, Query Optimization | 6.0% | `TASK-S1-01`, `TASK-S4-02` |
 | **DevOps & Security Engineer**| 01 | Docker Compose, Nginx Reverse Proxy, CI/CD Pipeline, Backup & Monitoring | 5.0% | `TASK-S1-02`, `TASK-S4-04` |
 | **QA / Performance Test Lead**| 01 | Kịch bản k6 1.000 RPS, 4 Bài bẫy Concurrency Data Integrity, UAT 6 Sheet | 7.0% | `TASK-S4-01`, `TASK-S4-02`, `TASK-S4-03` |
@@ -330,7 +329,7 @@ Mọi kỹ sư phát triển phần mềm tham gia dự án Mibid bắt buộc p
 3. **Nguyên tắc Khóa Phân Tán Cho Thao Tác Chuyển Bước (Distributed Locking):**
    * Mọi thao tác chuyển bước trên Kanban hoặc nộp báo giá cạnh tranh phải được bao bọc bởi `RedissonLock` theo cú pháp `lock:tenant_{tenant_id}:project_{project_id}` với TTL tối đa 5 giây để triệt tiêu hoàn toàn lỗi Race Condition.
 4. **Nguyên tắc Zero-Hardcode Văn Bản & Đa Ngôn Ngữ 5 Thứ Tiếng (i18n):**
-   * 100% các chuỗi văn bản hiển thị trên giao diện Web CMS và Mobile Portal bắt buộc phải được gọi qua từ điển ngôn ngữ (`vi.json`, `en.json`, `zh.json`, `ja.json`, `ko.json`).
+   * 100% các chuỗi văn bản hiển thị trên giao diện WebApp (Staff CMS và Vendor Portal) bắt buộc phải được gọi qua từ điển ngôn ngữ (`vi.json`, `en.json`, `zh.json`, `ja.json`, `ko.json`).
    * Phía Backend bắt buộc hỗ trợ 5 tệp `messages_*.properties` tương ứng.
    * Bảng danh sách dữ liệu (DataTable) bắt buộc tuân thủ thứ tự cột: `Checkbox` → `STT` → `Thao tác` → `Dữ liệu nghiệp vụ`.
 5. **Nguyên tắc Đóng Gói Sự Kiện Transactional Outbox Pattern:**

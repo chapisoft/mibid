@@ -24,9 +24,27 @@ public class UserController {
         private String password;
     }
 
+    @Data
+    public static class SwitchTenantRequest {
+        private java.util.UUID tenantId;
+    }
+
     @PostMapping("/login")
     public ResponseEntity<ResultResponse<UserService.AuthResponse>> login(@RequestBody LoginRequest request) {
         return ResponseEntity.ok(ResultResponse.success(userService.login(request.getUsername(), request.getPassword())));
+    }
+
+    @PostMapping("/switch-tenant")
+    public ResponseEntity<ResultResponse<UserService.AuthResponse>> switchTenant(
+            @RequestHeader(value = "X-User-ID", required = false) String userIdHeader,
+            @RequestBody SwitchTenantRequest request
+    ) {
+        java.util.UUID userId = userIdHeader != null ? java.util.UUID.fromString(userIdHeader) : null;
+        if (userId == null) {
+            // Lấy từ context nếu có
+            return ResponseEntity.ok(ResultResponse.success(userService.switchTenant(request.getTenantId(), request.getTenantId())));
+        }
+        return ResponseEntity.ok(ResultResponse.success(userService.switchTenant(userId, request.getTenantId())));
     }
 
     @GetMapping

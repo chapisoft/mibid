@@ -5,6 +5,7 @@ import {
   UserAccount,
   UserAccountStatus,
   UserRole,
+  SubscriptionPlan,
 } from '../shared/types';
 import { apiClient } from './apiClient';
 
@@ -159,6 +160,15 @@ class AdminService {
       return true;
     } catch {
       return false;
+    }
+  }
+
+  async getSubscriptionPlans(): Promise<SubscriptionPlan[]> {
+    try {
+      const response = await apiClient.get<SubscriptionPlan[]>('/public/plans');
+      return Array.isArray(response) ? response : [];
+    } catch {
+      return [];
     }
   }
 }
